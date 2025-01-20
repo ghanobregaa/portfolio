@@ -1,0 +1,15 @@
+.btn {
+  padding: 7px;
+  border-radius: 7px;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+
+.btn:hover {
+  background-color: var(--secondaryBackground);
+}
+
+.btn * {
+  color: var(--textColor);
+}

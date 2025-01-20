@@ -1,20 +1,46 @@
 @import url("https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap");
 
+@font-face {
+  font-family: "Cherolina";
+  src: url("./fonts/Cherolina.ttf") format("truetype");
+}
+
 body {
-  background-color: #151515;
+  background-color: var(--background);
 }
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
   outline: none;
-  font-family: "Inter", serif;
   line-height: 100%;
+  font-size: 14px;
+}
+
+p {
+  font-family: "Inter", serif;
+  color: var(--textColor);
 }
 
 h1 {
-  color: #fff;
+  font-family: "Poppins", serif;
+  color: var(--textColor);
 }
-h2 {
-  color: #ffffff20;
+
+:root {
+  --background: #fff;
+  --navbar: #ffffffcc;
+  --secondaryBackground: #f5f5f5;
+  --textColor: #050505;
+  --btnColor: #050505;
+  --btnText: #fff;
+}
+
+[data-theme="dark"] {
+  --background: #151515;
+  --navbar: #151515bb;
+  --secondaryBackground: #242424;
+  --textColor: #fff;
+  --btnColor: #fff;
+  --btnText: #050505;
 }
