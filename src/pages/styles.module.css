@@ -1,58 +1,49 @@
 .container {
-  margin: 3em;
+  max-width: 750px;
+  margin: auto;
 }
 
-.column {
+.banner {
+  background: linear-gradient(90deg, #69b7eb, #b3dbd3, #f4d6db);
+  height: 150px;
+  border-radius: 0 0 8px 8px;
+}
+
+.centerAvatar {
   display: flex;
-  flex-direction: column;
+  justify-content: left;
+}
+
+.avatar {
+  transform: translateY(50px);
+  width: 200px;
+  height: 200px;
+  border-radius: 100%;
+  overflow: hidden;
+  border: 8px solid #151515;
+}
+
+.avatar img {
+  height: 100%;
+  width: 100%;
+}
+
+.rowContent {
+  height: 100px;
+  display: flex;
   align-items: center;
-}
-
-.title {
-  font-size: 4em;
-  font-family: "Poppins", serif;
-  text-transform: uppercase;
-  font-weight: 900;
-}
-
-.title span:nth-child(1) {
+  justify-content: flex-end;
+  margin-left: 200px;
   color: #fff;
 }
 
-.title span:nth-child(2) {
-  color: #ffffff25;
-}
-
-.row {
-  display: flex;
-  justify-content: center;
-  gap: 100px;
-}
-
-.card {
-  padding: 20px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  width: 400px;
-  height: 500px;
-  background-color: #fff;
-  border-radius: 22px;
-}
-
-.picture {
-  background-color: #fff;
-}
-
-.picture img {
-  width: 200px;
-  height: 250px;
-  border-radius: 30px;
-  object-fit: cover;
-}
-
-@media only screen and (max-width: 600px) {
-  .title {
-    font-size: 2em;
-  }
+.btnWatch {
+  height: fit-content;
+  width: fit-content;
+  background-color: #f5f5f5;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 18px;
+  color: #000;
 }
