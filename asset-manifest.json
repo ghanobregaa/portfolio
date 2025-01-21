@@ -1,17 +1,17 @@
 {
   "files": {
-    "main.css": "/portfolio/static/css/main.164710e4.css",
-    "main.js": "/portfolio/static/js/main.c1d0b595.js",
-    "static/js/488.9561f9b8.chunk.js": "/portfolio/static/js/488.9561f9b8.chunk.js",
-    "static/media/Cherolina.ttf": "/portfolio/static/media/Cherolina.0a92877c75a7948fcdcc.ttf",
-    "static/media/badge.svg": "/portfolio/static/media/badge.7f9fbf5ee9f166c7b3ffdd92a697c9fa.svg",
-    "index.html": "/portfolio/index.html",
-    "main.164710e4.css.map": "/portfolio/static/css/main.164710e4.css.map",
-    "main.c1d0b595.js.map": "/portfolio/static/js/main.c1d0b595.js.map",
-    "488.9561f9b8.chunk.js.map": "/portfolio/static/js/488.9561f9b8.chunk.js.map"
+    "main.css": "/static/css/main.12e079c8.css",
+    "main.js": "/static/js/main.5e5e0ee6.js",
+    "static/js/488.9561f9b8.chunk.js": "/static/js/488.9561f9b8.chunk.js",
+    "static/media/Cherolina.ttf": "/static/media/Cherolina.0a92877c75a7948fcdcc.ttf",
+    "static/media/badge.svg": "/static/media/badge.7f9fbf5ee9f166c7b3ffdd92a697c9fa.svg",
+    "index.html": "/index.html",
+    "main.12e079c8.css.map": "/static/css/main.12e079c8.css.map",
+    "main.5e5e0ee6.js.map": "/static/js/main.5e5e0ee6.js.map",
+    "488.9561f9b8.chunk.js.map": "/static/js/488.9561f9b8.chunk.js.map"
   },
   "entrypoints": [
-    "static/css/main.164710e4.css",
-    "static/js/main.c1d0b595.js"
+    "static/css/main.12e079c8.css",
+    "static/js/main.5e5e0ee6.js"
   ]
 }
