@@ -18,7 +18,7 @@ export default function Switch() {
   }
   return (
     <div onClick={handleClick} className={styles.btn}>
-      {theme === "light" ? <HiMoon size={24} /> : <HiSun size={24} />}
+      {theme === "light" ? <HiSun size={24} /> : <HiMoon size={24} />}
     </div>
   );
 }

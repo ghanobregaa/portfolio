@@ -26,21 +26,27 @@ h1 {
   font-family: "Poppins", serif;
   color: var(--textColor);
 }
+a {
+  text-decoration: none;
+  color: unset;
+}
 
 :root {
   --background: #fff;
   --navbar: #ffffffcc;
-  --secondaryBackground: #f5f5f5;
+  --secondaryBackground: #f0f0f0;
   --textColor: #050505;
+  --textColor2: #495057;
   --btnColor: #050505;
   --btnText: #fff;
 }
 
 [data-theme="dark"] {
   --background: #151515;
-  --navbar: #151515bb;
   --secondaryBackground: #242424;
+  --navbar: #151515bb;
   --textColor: #fff;
+  --textColor2: #858e96;
   --btnColor: #fff;
   --btnText: #050505;
 }
