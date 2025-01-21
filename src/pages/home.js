@@ -80,9 +80,14 @@ export default function Home() {
           </div>
         </header>
         <main className={styles.main}>
-          <div className={styles.centerMain}>
-            <h1>Software</h1>
-            <h1>Developer</h1>
+          <div className={styles.columnMain}>
+            <div className={styles.box}>
+              <h1 className={styles.aboutMe}>ABOUT ME</h1>
+              <p className={styles.simpText}>
+                A asjdh kasdjh aksdj haslkdj haslkdj hasdlk ajsjdkh askjdh
+                ajskdh ajsd asdjjd lasdo asd saod
+              </p>
+            </div>
           </div>
         </main>
       </div>
