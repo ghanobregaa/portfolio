@@ -1,36 +1,33 @@
 import React from "react";
 import styles from "./styles.module.css";
+import { HiArrowDownTray, HiEye } from "react-icons/hi2";
 import Switch from "../components/Switch";
-import { HiCake, HiMapPin } from "react-icons/hi2";
 
 export default function Home() {
   return (
-    <div className={styles.container}>
-      <div className={styles.nav}>
-        <div className={styles.navContainer}>
-          <h1>Portfolio</h1>
-        </div>
-      </div>
-      <div className={styles.banner}>
-        <div className={styles.rowContent}>
-          <div className={styles.avatar}>
-            <img src="Profile.jpeg" alt="Avatar" />
+    <>
+      <div className={styles.container}>
+        <nav className={styles.nav}>
+          <h1>PORTFOLIO</h1>
+          <Switch />
+        </nav>
+        <header className={styles.header}>
+          <div className={styles.banner}></div>
+          <div className={styles.rowCv}>
+            <div className={styles.avatar}>
+              <img src="Picture.jpeg" alt="Avatar" />
+            </div>
+            <p className={styles.cv}>
+              <HiArrowDownTray size={20} />
+              Download CV
+            </p>
           </div>
-        </div>
+          <div className={styles.content}>
+            <p className={styles.name}>Guilherme Nóbrega</p>
+          </div>
+        </header>
+        <main className={styles.main}></main>
       </div>
-      <div className={styles.rowName}>
-        <Switch />
-        <p className={styles.cv}>Download CV</p>
-      </div>
-      <div className={styles.profileContent}>
-        <p className={styles.name}>Guilherme Nóbrega</p>
-        <span className={styles.cRow}>
-          <HiMapPin size={16} /> <p>Madeira Island</p>
-        </span>
-        <span className={styles.cRow}>
-          <HiCake size={16} /> <p>December, 1999</p>
-        </span>
-      </div>
-    </div>
+    </>
   );
 }
