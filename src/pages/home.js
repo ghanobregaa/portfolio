@@ -21,20 +21,12 @@ export default function Home() {
           <Switch />
         </nav>
         <header className={styles.header}>
-          <div className={styles.banner}>
-            <div className={styles.blob}></div>
-            <div className={styles.blob}></div>
-            <div className={styles.blob}></div>
-            <div className={styles.blob}></div>
-          </div>
+          <div className={styles.banner}></div>
           <div className={styles.rowCv}>
             <div className={styles.avatar}>
               <img src="Profile.jpeg" alt="Avatar" />
             </div>
-            <p className={styles.cv}>
-              <HiEye size={16} />
-              Watch CV
-            </p>
+            <p className={styles.cv}>Download CV</p>
           </div>
           <div className={styles.content}>
             <div className={styles.name}>
@@ -47,15 +39,15 @@ export default function Home() {
             </p>
             <div className={styles.rowContents}>
               <span className={styles.rowDesc}>
-                <HiBriefcase size={18} />
+                <HiBriefcase />
                 <p>Working</p>
               </span>
               <span className={styles.rowDesc}>
-                <HiMapPin size={18} />
+                <HiMapPin />
                 <p>Madeira Island</p>
               </span>
               <span className={styles.rowDesc}>
-                <HiCake size={18} />
+                <HiCake />
                 <p>December 4th</p>
               </span>
             </div>
@@ -66,7 +58,7 @@ export default function Home() {
               target="_blank"
               href="https://www.linkedin.com/in/ghanobrega"
             >
-              <RiLinkedinBoxFill size={18} />
+              <RiLinkedinBoxFill />
               <p>ghanobrega</p>
             </a>
             <a
@@ -74,19 +66,43 @@ export default function Home() {
               target="_blank"
               href="https://www.instagram.com/guilhermehan_"
             >
-              <RiInstagramFill size={18} />
+              <RiInstagramFill />
               <p>guilhermehan_</p>
             </a>
           </div>
         </header>
         <main className={styles.main}>
           <div className={styles.columnMain}>
-            <div className={styles.box}>
-              <h1 className={styles.aboutMe}>ABOUT ME</h1>
-              <p className={styles.simpText}>
-                A asjdh kasdjh aksdj haslkdj haslkdj hasdlk ajsjdkh askjdh
-                ajskdh ajsd asdjjd lasdo asd saod
-              </p>
+            <div className={styles.centerTitle}>
+              <h1>Software</h1>
+              <h1>Developer</h1>
+            </div>
+            <p className={styles.simpText}>
+              <b>Yooo! 🤙</b>
+              <br />
+              I’m a software developer based on Madeira Island, passionate about
+              crafting <span className={styles.subb}>beautiful</span> and
+              intuitive applications.
+            </p>
+            <br />
+            <p className={styles.simpText}>
+              {" "}
+              I turn ideas into seamless digital experiences with user-friendly
+              designs and robust solutions, always aiming for high-quality
+              results.
+            </p>
+            <div className={styles.centerTitle}>
+              <h1>Work</h1>
+              <h1>Experience</h1>
+            </div>
+            <div className={styles.columnWork}>
+              <div className={styles.boxWork}>
+                <p className={styles.boxTitle}>Grupo AFA</p>
+              </div>
+            </div>
+            <div className={styles.centerTitle}>
+              <h1>Skills</h1>
+              <h1>Unlocked</h1>
             </div>
           </div>
         </main>

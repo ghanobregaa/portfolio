@@ -8,6 +8,7 @@
   background-color: var(--navbar);
   backdrop-filter: blur(20px);
   position: fixed;
+  font-size: 0.75em;
   top: 0;
   z-index: 1;
   display: grid;
@@ -32,10 +33,10 @@
 
 .banner {
   height: 200px;
-  background: linear-gradient(45deg, #fcc27f, #d370c6);
+  background: linear-gradient(75deg, #fcc27f, #d370c6);
   border-radius: 0 0 7px 7px;
-  background-size: 150% 150%;
-  animation: moveGradient 10s ease infinite;
+  background-size: 200% 200%;
+  animation: moveGradient 5s ease infinite;
 }
 
 @keyframes moveGradient {
@@ -59,13 +60,14 @@
 }
 
 .cv {
+  margin-top: 1rem;
   height: fit-content;
   background-color: var(--btnColor);
   color: var(--btnText);
   padding: 10px 14px;
-  font-size: 16px;
+  font-size: 1em;
   border-radius: 12px;
-  font-weight: 700;
+  font-weight: 900;
   display: flex;
   gap: 7px;
   align-items: center;
@@ -104,7 +106,7 @@
 }
 
 .name p {
-  font-size: 28px;
+  font-size: 2em;
   font-weight: 800;
 }
 
@@ -113,9 +115,8 @@
 }
 
 .desc {
-  line-height: 25px;
-  font-size: 18px;
-  margin-bottom: 14px;
+  line-height: 1.3;
+  font-size: 1.1em;
 }
 
 .rowDesc {
@@ -124,21 +125,16 @@
   gap: 4px;
   align-items: center;
   width: max-content;
+  font-size: 1em;
 }
 
 .rowDesc p {
   color: var(--textColor2);
-  font-size: 16px;
-}
-
-.rowLinks {
-  margin-top: 14px;
-  display: flex;
-  gap: 7px;
-  color: var(--textColor);
+  font-size: 1em;
 }
 
 .rowContents {
+  margin: 1rem 0;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -148,7 +144,6 @@
 }
 
 .rowIcons {
-  margin-top: 7px;
   display: flex;
   gap: 7px;
   flex-wrap: wrap;
@@ -163,33 +158,75 @@
   border-radius: 12px;
   background-color: var(--secondaryBackground);
   cursor: pointer;
-  gap: 4px;
+  gap: 7px;
 }
 
 .rowIcon:hover {
   background-color: var(--btnColor);
   transition: 0.15s ease-in-out;
 }
+
+.rowIcon p {
+  font-size: 1em;
+}
+
 .rowIcon:hover * {
   color: var(--btnText);
   transition: 0.15s ease-in-out;
 }
 
 .columnMain {
-  margin-top: 65px;
   padding: 0 10%;
 }
 
-.aboutMe {
-  text-align: center;
-  font-size: 48px;
+.simpText {
+  line-height: 1.5;
+  font-size: 1.1em;
+}
+
+.simpText b {
+  line-height: 1.5;
+  font-size: 1.4em;
+}
+
+.subb {
+  font-size: 1.1em;
+  background: linear-gradient(45deg, #ffd7aa, #ffbbf6);
+  padding: 2px 6px;
+  color: #050505;
+  border-radius: 6px;
+}
+
+.centerTitle {
+  margin: 12rem 0 3rem 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.centerTitle h1 {
   text-transform: uppercase;
+  font-size: 4em;
   font-weight: 900;
 }
 
-.simpText {
-  font-size: 18px;
-  line-height: 25px;
+.centerTitle h1:nth-child(2) {
+  opacity: 0.25;
+}
+
+.columnWork {
+  display: flex;
+  flex-direction: column;
+}
+
+.boxWork {
+  padding: 1rem;
+  background-color: var(--secondaryBackground);
+  border-radius: 12px;
+}
+
+.boxTitle {
+  font-size: 1.2em;
 }
 
 @media only screen and (max-width: 600px) {
@@ -207,6 +244,7 @@
     left: 1rem;
   }
   .cv {
+    margin-top: 0;
     font-size: 12px;
     padding: 0.75rem 1rem;
   }
@@ -215,6 +253,10 @@
   }
   .name p {
     font-size: 20px;
+  }
+
+  .nav {
+    font-size: 0.6em;
   }
   .name {
     gap: 7px;
@@ -236,5 +278,17 @@
   }
   .rowIcon p {
     font-size: 14px;
+  }
+
+  .centerTitle h1 {
+    font-size: 40px;
+    font-weight: 900;
+  }
+
+  .simpText {
+    font-size: 16px;
+  }
+  .subb {
+    font-size: 16px;
   }
 }

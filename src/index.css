@@ -14,10 +14,10 @@ body {
   box-sizing: border-box;
   outline: none;
   line-height: 100%;
-  font-size: 14px;
 }
 
-p {
+p,
+b {
   font-family: "Inter", serif;
   color: var(--textColor);
 }
