@@ -301,11 +301,12 @@
 }
 
 .footerContent {
-  font-size: inherit;
+  font-size: 0.85em;
   color: var(--textColor2);
 }
 
 .aFooter {
+  cursor: pointer;
   color: var(--textColor);
   font-weight: 500;
 }

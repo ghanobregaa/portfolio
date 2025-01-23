@@ -249,7 +249,7 @@ export default function Home() {
                 className={styles.aFooter}
                 href="https://ghanobregaa.github.io/portfolio/"
               >
-                Guilherme
+                GN
               </a>
             </p>
           </p>
