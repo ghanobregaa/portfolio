@@ -11,8 +11,39 @@ import Switch from "../components/Switch";
 import { ReactComponent as Badge } from "../icons/badge.svg";
 
 import { RiInstagramFill, RiLinkedinBoxFill } from "react-icons/ri";
-
+import {
+  TbBrandCss3,
+  TbBrandFigma,
+  TbBrandFlutter,
+  TbBrandGithub,
+  TbBrandHtml5,
+  TbBrandJavascript,
+  TbBrandPython,
+  TbBrandReact,
+  TbBrandVscode,
+} from "react-icons/tb";
+import Meteor from "../components/Meteor";
 export default function Home() {
+  function getYearDifference(startDate, endDate) {
+    // Calculate the difference in years
+    let yearDiff = startDate.getFullYear() - endDate.getFullYear();
+
+    // Check if we need to adjust for months and days
+    if (
+      startDate.getMonth() < endDate.getMonth() ||
+      (startDate.getMonth() === endDate.getMonth() &&
+        startDate.getDate() < endDate.getDate())
+    ) {
+      yearDiff--;
+    }
+
+    return yearDiff;
+  }
+  const startDate = new Date();
+  const birthday = new Date("1999-12-04");
+  const start_work = new Date("2021-03-01");
+  const age = getYearDifference(startDate, birthday);
+  const work = getYearDifference(startDate, start_work);
   return (
     <>
       <div className={styles.container}>
@@ -21,13 +52,18 @@ export default function Home() {
           <Switch />
         </nav>
         <header className={styles.header}>
-          <div className={styles.banner}></div>
+          <div className={styles.banner}>
+            <Meteor />
+          </div>
           <div className={styles.rowCv}>
             <div className={styles.avatar}>
               <img src="Profile.jpeg" alt="Avatar" />
             </div>
-            <p className={styles.cv}>Download CV</p>
+            <a className={styles.cv} href="Guilherme_Nobrega.pdf">
+              Download CV
+            </a>
           </div>
+
           <div className={styles.content}>
             <div className={styles.name}>
               <p>Guilherme Nóbrega</p>
@@ -73,30 +109,37 @@ export default function Home() {
         </header>
         <main className={styles.main}>
           <div className={styles.columnMain}>
-            <div className={styles.centerTitle}>
+            <div className={styles.centerTitle} style={{ marginTop: "10em" }}>
               <h1>About</h1>
-              <h1>Guilherme</h1>
+              <h1>Me</h1>
             </div>
             <div className={styles.simpTextBox}>
               <p className={styles.simpText}>
                 <b>Yooo! 🤙</b>
                 <br />
-                I’m a software developer based on Madeira Island, passionate
-                about crafting <span className={styles.subb}>
-                  beautiful
-                </span>{" "}
-                and intuitive applications.
+                I'm a <span className={styles.subb}>Full-Stack Developer </span>
+                based on Madeira Island,{" "}
+                <span className={styles.subb}>{age} years old </span>
+                and passionate about designing and building impactful digital
+                solutions.
               </p>
               <br />
               <p className={styles.simpText}>
-                {" "}
-                I turn ideas into seamless digital experiences with
-                user-friendly designs and robust solutions, always aiming for
-                high-quality results.
+                With expertise in both{" "}
+                <span className={styles.subb}>front-end </span>and{" "}
+                <span className={styles.subb}>back-end </span>
+                development, I transform innovative ideas into seamless,
+                user-centric applications that prioritize performance,
+                scalability, and intuitive design.
+              </p>
+              <br />
+              <p className={styles.simpText}>
+                My mission is to deliver high-quality, robust solutions that
+                elevate user experiences and drive meaningful results.
               </p>
             </div>
-            <div className={styles.centerTitle}>
-              <h1>3 years of</h1>
+            <div className={styles.centerTitle} style={{ marginTop: "10em" }}>
+              <h1>{work} years of</h1>
               <h1>Experience</h1>
             </div>
             <div className={styles.columnWork}>
@@ -109,12 +152,108 @@ export default function Home() {
                 <p className={styles.contentWork}>Mar 2021 - Present</p>
               </div>
             </div>
-            <div className={styles.centerTitle}>
-              <h1>Skills</h1>
-              <h1>Unlocked</h1>
+            <div className={styles.centerTitle} style={{ marginTop: "10em" }}>
+              <h1>Development</h1>
+              <h1>Tools</h1>
+            </div>
+            <div className={styles.columnSkills}>
+              <div className={styles.rowSkills}>
+                <div className={styles.iconSkills}>
+                  <TbBrandReact />
+                </div>
+                <div className={styles.columnSkillsNames}>
+                  <p>ReactJS</p>
+                  <p>JavaScript Framework</p>
+                </div>
+              </div>
+              <div className={styles.rowSkills}>
+                <div className={styles.iconSkills}>
+                  <TbBrandFlutter />
+                </div>
+                <div className={styles.columnSkillsNames}>
+                  <p>Flutter</p>
+                  <p>Cross-platform Mobile Framework</p>
+                </div>
+              </div>
+              <div className={styles.rowSkills}>
+                <div className={styles.iconSkills}>
+                  <TbBrandJavascript />
+                </div>
+                <div className={styles.columnSkillsNames}>
+                  <p>JavaScript</p>
+                  <p>Front-end Programming Language</p>
+                </div>
+              </div>
+              <div className={styles.rowSkills}>
+                <div className={styles.iconSkills}>
+                  <TbBrandHtml5 />
+                </div>
+                <div className={styles.columnSkillsNames}>
+                  <p>HTML</p>
+                  <p>Hypertext Markup Language</p>
+                </div>
+              </div>
+              <div className={styles.rowSkills}>
+                <div className={styles.iconSkills}>
+                  <TbBrandCss3 />
+                </div>
+                <div className={styles.columnSkillsNames}>
+                  <p>CSS</p>
+                  <p>Cascading Style Sheets</p>
+                </div>
+              </div>
+              <div className={styles.rowSkills}>
+                <div className={styles.iconSkills}>
+                  <TbBrandPython />
+                </div>
+                <div className={styles.columnSkillsNames}>
+                  <p>Python</p>
+                  <p>Back-end Programming Language</p>
+                </div>
+              </div>
+              <div className={styles.rowSkills}>
+                <div className={styles.iconSkills}>
+                  <TbBrandFigma />
+                </div>
+                <div className={styles.columnSkillsNames}>
+                  <p>Figma</p>
+                  <p>Graphic Design and Prototyping</p>
+                </div>
+              </div>
+              <div className={styles.rowSkills}>
+                <div className={styles.iconSkills}>
+                  <TbBrandVscode />
+                </div>
+                <div className={styles.columnSkillsNames}>
+                  <p>Visual Studio Code</p>
+                  <p>Source Code Editor</p>
+                </div>
+              </div>
+              <div className={styles.rowSkills}>
+                <div className={styles.iconSkills}>
+                  <TbBrandGithub />
+                </div>
+                <div className={styles.columnSkillsNames}>
+                  <p>GitHub</p>
+                  <p>Version Control System</p>
+                </div>
+              </div>
             </div>
           </div>
         </main>
+        <footer className={styles.footer}>
+          <p>
+            <p className={styles.footerContent}>
+              © {new Date().getFullYear()} Handcrafted with ❤️ by{" "}
+              <a
+                className={styles.aFooter}
+                href="https://ghanobregaa.github.io/portfolio/"
+              >
+                Guilherme
+              </a>
+            </p>
+          </p>
+        </footer>
       </div>
     </>
   );

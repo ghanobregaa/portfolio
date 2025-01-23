@@ -1,7 +1,3 @@
-.container {
-  min-height: 200vh;
-}
-
 .nav {
   width: 100%;
   height: 50px;
@@ -33,10 +29,8 @@
 
 .banner {
   height: 200px;
-  background: linear-gradient(75deg, #fcc27f, #d370c6);
+  background-color: var(--banner);
   border-radius: 0 0 7px 7px;
-  background-size: 200% 200%;
-  animation: moveGradient 5s ease infinite;
 }
 
 @keyframes moveGradient {
@@ -62,16 +56,22 @@
 .cv {
   margin-top: 1rem;
   height: fit-content;
-  background-color: var(--btnColor);
-  color: var(--btnText);
+  background-color: var(--primaryBtn);
+  color: var(--primaryBtnText);
   padding: 10px 20px;
-  font-size: 1em;
+  font-size: inherit;
   border-radius: 30px;
   display: flex;
   gap: 7px;
   align-items: center;
   cursor: pointer;
-  border: 1px solid var(--border);
+  border: 2px solid d370c6;
+  box-shadow: 0px 0px 7px 1px #d370c6;
+  transition: box-shadow 0.15s ease-in-out, border 0.15s ease-in-out;
+}
+
+.cv:hover {
+  box-shadow: 0px 0px 12px 3px #d370c6;
 }
 
 .avatar {
@@ -182,7 +182,6 @@
 
 .simpTextBox {
   padding: 1rem;
-  margin-bottom: 20em;
 }
 
 .simpText {
@@ -199,11 +198,11 @@
 
 .subb {
   font-size: inherit;
-  color: var(--btnText);
+  color: var(--textColor);
 }
 
 .centerTitle {
-  margin: 5rem 0 2rem 0;
+  margin: 2rem 0 2rem 0;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -230,7 +229,8 @@
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  border: 1px solid var(--border);
+  border: 1px solid transparent;
+  cursor: pointer;
 }
 
 .boxWork:hover {
@@ -246,6 +246,68 @@
   color: var(--textColor2);
   line-height: 1.5;
   font-size: inherit;
+}
+
+.columnSkills {
+  display: flex;
+  flex-direction: column;
+  padding: 1.5rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  margin-bottom: 5rem;
+  gap: 1rem;
+}
+
+.rowSkills {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.iconSkills {
+  min-width: 50px;
+  min-height: 50px;
+  background-color: var(--secondaryBackground);
+  display: grid;
+  border-radius: 8px;
+  place-items: center;
+  color: var(--textColor);
+  font-size: 1.5em;
+}
+
+.columnSkillsNames {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1px;
+}
+
+.columnSkillsNames p:nth-child(1) {
+  font-size: 1em;
+  line-height: 1.25;
+  color: var(--textColor);
+}
+.columnSkillsNames p:nth-child(2) {
+  font-size: 0.9em;
+  line-height: 1.25;
+  color: var(--textColor2);
+}
+
+.footer {
+  background-color: var(--background);
+  height: 100px;
+  display: grid;
+  place-items: center;
+}
+
+.footerContent {
+  font-size: inherit;
+  color: var(--textColor2);
+}
+
+.aFooter {
+  color: var(--textColor);
+  font-weight: 500;
 }
 
 @media only screen and (max-width: 600px) {
@@ -265,7 +327,7 @@
   .cv {
     margin-top: 0;
     font-size: 0.85em;
-    padding: 0.75rem 1rem;
+    padding: 9px 17px;
   }
   .content {
     padding: 0 1rem;
