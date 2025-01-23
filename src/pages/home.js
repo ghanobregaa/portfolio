@@ -48,7 +48,7 @@ export default function Home() {
               </span>
               <span className={styles.rowDesc}>
                 <HiCake />
-                <p>December 4th</p>
+                <p>December, 1999</p>
               </span>
             </div>
           </div>
@@ -77,27 +77,36 @@ export default function Home() {
               <h1>Software</h1>
               <h1>Developer</h1>
             </div>
-            <p className={styles.simpText}>
-              <b>Yooo! 🤙</b>
+            <div className={styles.simpTextBox}>
+              <p className={styles.simpText}>
+                <b>Yooo! 🤙</b>
+                <br />
+                I’m a software developer based on Madeira Island, passionate
+                about crafting <span className={styles.subb}>
+                  beautiful
+                </span>{" "}
+                and intuitive applications.
+              </p>
               <br />
-              I’m a software developer based on Madeira Island, passionate about
-              crafting <span className={styles.subb}>beautiful</span> and
-              intuitive applications.
-            </p>
-            <br />
-            <p className={styles.simpText}>
-              {" "}
-              I turn ideas into seamless digital experiences with user-friendly
-              designs and robust solutions, always aiming for high-quality
-              results.
-            </p>
+              <p className={styles.simpText}>
+                {" "}
+                I turn ideas into seamless digital experiences with
+                user-friendly designs and robust solutions, always aiming for
+                high-quality results.
+              </p>
+            </div>
             <div className={styles.centerTitle}>
-              <h1>Work</h1>
+              <h1>3 years of</h1>
               <h1>Experience</h1>
             </div>
             <div className={styles.columnWork}>
               <div className={styles.boxWork}>
-                <p className={styles.boxTitle}>Grupo AFA</p>
+                <h1 className={styles.workTitle}>Grupo AFA</h1>
+                <p className={styles.contentWork}>
+                  Developed mobile applications with Flutter and websites using
+                  ReactJS, integrating REST APIs for seamless functionality.
+                </p>
+                <p className={styles.contentWork}>Mar 2021 - Present</p>
               </div>
             </div>
             <div className={styles.centerTitle}>

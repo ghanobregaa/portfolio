@@ -16,6 +16,10 @@ body {
   line-height: 100%;
 }
 
+::selection {
+  background-color: var(--selection);
+}
+
 p,
 b {
   font-family: "Inter", serif;
@@ -32,21 +36,27 @@ a {
 }
 
 :root {
+  --selection: #15151520;
   --background: #fff;
-  --navbar: #ffffffcc;
-  --secondaryBackground: #f0f0f0;
+  --navbar: #ffffffdd;
+  --secondaryBackground: #f5f5f5;
   --textColor: #050505;
   --textColor2: #495057;
   --btnColor: #050505;
   --btnText: #fff;
+  --green-opac: #00993325;
+  --green-text: #009933;
 }
 
 [data-theme="dark"] {
-  --background: #151515;
-  --secondaryBackground: #242424;
-  --navbar: #151515bb;
+  --selection: #ffffff20;
+  --background: #151312;
+  --secondaryBackground: #1e1e1e;
+  --navbar: #151515dd;
   --textColor: #fff;
-  --textColor2: #858e96;
+  --textColor2: #888;
   --btnColor: #fff;
   --btnText: #050505;
+  --green-opac: #0abb3625;
+  --green-text: #10ce3f;
 }
