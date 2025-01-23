@@ -74,8 +74,8 @@ export default function Home() {
         <main className={styles.main}>
           <div className={styles.columnMain}>
             <div className={styles.centerTitle}>
-              <h1>Software</h1>
-              <h1>Developer</h1>
+              <h1>About</h1>
+              <h1>Guilherme</h1>
             </div>
             <div className={styles.simpTextBox}>
               <p className={styles.simpText}>
@@ -101,7 +101,7 @@ export default function Home() {
             </div>
             <div className={styles.columnWork}>
               <div className={styles.boxWork}>
-                <h1 className={styles.workTitle}>Grupo AFA</h1>
+                <p className={styles.workTitle}>Grupo AFA</p>
                 <p className={styles.contentWork}>
                   Developed mobile applications with Flutter and websites using
                   ReactJS, integrating REST APIs for seamless functionality.

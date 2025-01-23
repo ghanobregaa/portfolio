@@ -44,19 +44,21 @@ a {
   --textColor2: #495057;
   --btnColor: #050505;
   --btnText: #fff;
+  --border: #383838;
   --green-opac: #00993325;
   --green-text: #009933;
 }
 
 [data-theme="dark"] {
   --selection: #ffffff20;
-  --background: #151312;
-  --secondaryBackground: #1e1e1e;
+  --background: #171717;
+  --secondaryBackground: #1c1c1c;
   --navbar: #151515dd;
   --textColor: #fff;
-  --textColor2: #888;
-  --btnColor: #fff;
-  --btnText: #050505;
+  --textColor2: #858585;
+  --btnColor: #2b2b2b;
+  --btnText: #fff;
+  --border: #383838;
   --green-opac: #0abb3625;
   --green-text: #10ce3f;
 }
