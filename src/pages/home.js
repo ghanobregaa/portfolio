@@ -48,7 +48,7 @@ export default function Home() {
     <>
       <div className={styles.container}>
         <nav className={styles.nav}>
-          <h1>PORTFÓLIO</h1>
+          <h1>PORTFOLIO</h1>
           <Switch />
         </nav>
         <header className={styles.header}>
