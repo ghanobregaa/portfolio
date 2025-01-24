@@ -11,7 +11,7 @@ export default function Meteor() {
           style={{
             left: `${-25 + index * 10}%`,
             animationDelay: `${Math.random() * index}s`,
-            animationDuration: `${(Math.random() * (1 - 0.5) + 0.5) * 8}s`,
+            animationDuration: `${(Math.random() * (1 - 0.5) + 0.5) * 12}s`,
             animationComposition: "replace",
           }}
         ></div>
@@ -23,7 +23,7 @@ export default function Meteor() {
           style={{
             left: `${-40 + index * 10}%`,
             animationDelay: `${Math.random() * index}s`,
-            animationDuration: `${(Math.random() * (1 - 0.5) + 0.5) * 4}s`,
+            animationDuration: `${(Math.random() * (1 - 0.5) + 0.5) * 7}s`,
             animationComposition: "replace",
           }}
         ></div>
