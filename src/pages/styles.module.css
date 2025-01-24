@@ -6,7 +6,7 @@
   position: fixed;
   font-size: 0.75em;
   top: 0;
-  z-index: 1;
+  z-index: 10;
   display: grid;
   place-items: center;
 }
@@ -181,6 +181,7 @@
   cursor: pointer;
   gap: 7px;
   border: 1px solid var(--border);
+  position: relative;
 }
 
 .rowIcon:hover {
@@ -223,6 +224,7 @@
 }
 
 .centerTitle {
+  padding: 0 3%;
   margin: 2rem 0 2rem 0;
   display: flex;
   flex-direction: column;
@@ -315,6 +317,7 @@
 }
 
 .footer {
+  text-align: center;
   background-color: var(--background);
   height: 100px;
   display: grid;
@@ -384,6 +387,8 @@
   }
 
   .centerTitle h1 {
+    padding: 0 1rem;
+
     font-size: 40px;
     font-weight: 900;
   }

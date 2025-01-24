@@ -4,6 +4,7 @@ import {
   HiArrowDownTray,
   HiBriefcase,
   HiCake,
+  HiEnvelope,
   HiEye,
   HiMapPin,
 } from "react-icons/hi2";
@@ -92,6 +93,13 @@ export default function Home() {
           </div>
           <div className={styles.rowIcons}>
             <a
+              className={`${styles.rowIcon} ${styles.mail}`}
+              target="_blank"
+              href="mailto:ghanobrega@gmail.com"
+            >
+              <HiEnvelope />
+            </a>
+            <a
               className={styles.rowIcon}
               target="_blank"
               href="https://www.linkedin.com/in/ghanobrega"
@@ -111,7 +119,7 @@ export default function Home() {
         </header>
         <main className={styles.main}>
           <div className={styles.columnMain}>
-            <div className={styles.centerTitle} style={{ marginTop: "10em" }}>
+            <div className={styles.centerTitle} style={{ marginTop: "7em" }}>
               <h1>About</h1>
               <h1>Me</h1>
             </div>
@@ -140,7 +148,7 @@ export default function Home() {
                 elevate user experiences and drive meaningful results.
               </p>
             </div>
-            <div className={styles.centerTitle} style={{ marginTop: "10em" }}>
+            <div className={styles.centerTitle} style={{ marginTop: "7em" }}>
               <h1>{work} years of</h1>
               <h1>Experience</h1>
             </div>
@@ -154,7 +162,7 @@ export default function Home() {
                 <p className={styles.contentWork}>Mar 2021 - Present</p>
               </div>
             </div>
-            <div className={styles.centerTitle} style={{ marginTop: "10em" }}>
+            <div className={styles.centerTitle} style={{ marginTop: "7em" }}>
               <h1>Development</h1>
               <h1>Tools</h1>
             </div>
