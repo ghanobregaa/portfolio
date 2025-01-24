@@ -48,13 +48,15 @@ export default function Home() {
     <>
       <div className={styles.container}>
         <nav className={styles.nav}>
-          <h1>PORTFOLIO</h1>
+          <div className={styles.separ}>
+            <span></span>
+            <p>GN</p>
+            <span></span>
+          </div>
           <Switch />
         </nav>
         <header className={styles.header}>
-          <div className={styles.banner}>
-            <Meteor />
-          </div>
+          <div className={styles.banner}></div>
           <div className={styles.rowCv}>
             <div className={styles.avatar}>
               <img src="Profile.jpeg" alt="Avatar" />
