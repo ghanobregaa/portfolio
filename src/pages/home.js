@@ -57,7 +57,9 @@ export default function Home() {
           <Switch />
         </nav>
         <header className={styles.header}>
-          <div className={styles.banner}></div>
+          <div className={styles.banner}>
+            <img src="distortion.png" />
+          </div>
           <div className={styles.rowCv}>
             <div className={styles.avatar}>
               <img src="Profile.jpeg" alt="Avatar" />
