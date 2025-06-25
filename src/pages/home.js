@@ -58,7 +58,7 @@ export default function Home() {
         </nav>
         <header className={styles.header}>
           <div className={styles.banner}>
-            <img src="distortion.png" />
+            <Meteor />
           </div>
           <div className={styles.rowCv}>
             <div className={styles.avatar}>
