@@ -20,7 +20,8 @@ body {
 }
 
 p,
-b {
+b,
+li {
   font-family: "Inter", serif;
   color: var(--textColor);
 }

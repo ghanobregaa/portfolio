@@ -257,6 +257,7 @@
   gap: 1rem;
   border: 1px solid transparent;
   cursor: pointer;
+  position: relative;
 }
 
 .boxWork:hover {
@@ -272,6 +273,24 @@
   color: var(--textColor2);
   line-height: 1.5;
   font-size: inherit;
+}
+
+.contentWorkLi {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.boxWork:hover .arrow {
+  opacity: 1;
+}
+
+.arrow {
+  color: var(--textColor);
+  position: absolute;
+  right: 1rem;
+  top: 1rem;
+  opacity: 0;
 }
 
 .columnSkills {

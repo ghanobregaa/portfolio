@@ -13,15 +13,21 @@ import { ReactComponent as Badge } from "../icons/badge.svg";
 
 import { RiInstagramFill, RiLinkedinBoxFill } from "react-icons/ri";
 import {
+  TbArrowsDiagonal,
   TbBrandCss3,
   TbBrandFigma,
   TbBrandFlutter,
   TbBrandGithub,
   TbBrandHtml5,
+  TbBrandInstagramFilled,
   TbBrandJavascript,
+  TbBrandLinkedinFilled,
   TbBrandPython,
   TbBrandReact,
   TbBrandVscode,
+  TbChevronDownRight,
+  TbChevronUpRight,
+  TbMailFilled,
 } from "react-icons/tb";
 import Meteor from "../components/Meteor";
 export default function Home() {
@@ -99,23 +105,24 @@ export default function Home() {
               target="_blank"
               href="mailto:ghanobrega@gmail.com"
             >
-              <HiEnvelope />
+              <TbMailFilled />
+              Email
             </a>
             <a
               className={styles.rowIcon}
               target="_blank"
               href="https://www.linkedin.com/in/ghanobrega"
             >
-              <RiLinkedinBoxFill />
-              <p>ghanobrega</p>
+              <TbBrandLinkedinFilled />
+              LinkedIn
             </a>
             <a
               className={styles.rowIcon}
               target="_blank"
-              href="https://www.instagram.com/guilhermehan_"
+              href="https://www.instagram.com/ghanobrega"
             >
-              <RiInstagramFill />
-              <p>guilhermehan_</p>
+              <TbBrandInstagramFilled />
+              Instagram
             </a>
           </div>
         </header>
@@ -129,7 +136,7 @@ export default function Home() {
               <p className={styles.simpText}>
                 <b>Yooo! 🤙</b>
                 <br />
-                I'm a <span className={styles.subb}>Full-Stack Developer </span>
+                I'm a <span className={styles.subb}>full-stack developer </span>
                 based on Madeira Island,{" "}
                 <span className={styles.subb}>{age} years old </span>
                 and passionate about designing and building impactful digital
@@ -155,14 +162,46 @@ export default function Home() {
               <h1>Experience</h1>
             </div>
             <div className={styles.columnWork}>
-              <div className={styles.boxWork}>
+              <a
+                className={styles.boxWork}
+                target="_blank"
+                href="https://www.afa.pt"
+              >
                 <p className={styles.workTitle}>Grupo AFA</p>
+                <p className={styles.contentWork}>
+                  After the IT departments of Savoy Signature and Grupo AFA
+                  merged, I built a Flutter mobile app for the collaborators
+                  portal, created a Python script to automate hotel
+                  reservations, and developed an internal helpdesk ticketing
+                  system using ReactJS to improve staff communication,
+                  efficiency, and support management.
+                </p>
+                <p className={styles.contentWork}>Sep 2022 - Present</p>
+                <div className={styles.arrow}>
+                  <TbChevronUpRight size={20} />
+                </div>
+              </a>
+              <a
+                className={styles.boxWork}
+                target="_blank"
+                href="https://www.savoysignature.com"
+              >
+                <p className={styles.workTitle}>Savoy Signature</p>
                 <p className={styles.contentWork}>
                   Developed mobile applications with Flutter and websites using
                   ReactJS, integrating REST APIs for seamless functionality.
+                  <br />
+                  <br />
+                  This included designing and building a mobile app for the
+                  hotel’s maintenance team to streamline task management and
+                  issue tracking, as well as creating a collaborators portal to
+                  improve internal communication and coordination among staff.
                 </p>
-                <p className={styles.contentWork}>Mar 2021 - Present</p>
-              </div>
+                <p className={styles.contentWork}>Mar 2021 - Sep 2022</p>
+                <div className={styles.arrow}>
+                  <TbChevronUpRight size={20} />
+                </div>
+              </a>
             </div>
             <div className={styles.centerTitle} style={{ marginTop: "7em" }}>
               <h1>Development</h1>
