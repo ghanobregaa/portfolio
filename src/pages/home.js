@@ -10,7 +10,7 @@ import {
 } from "react-icons/hi2";
 import Switch from "../components/Switch";
 import { ReactComponent as Badge } from "../icons/badge.svg";
-
+import { motion } from "motion/react"
 import { RiInstagramFill, RiLinkedinBoxFill } from "react-icons/ri";
 import {
   TbArrowsDiagonal,
@@ -63,28 +63,28 @@ export default function Home() {
           <Switch />
         </nav>
         <header className={styles.header}>
-          <div className={styles.banner}>
+          <motion.div  initial={{opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} transition={{delay: 0.25}} className={styles.banner}>
             <Meteor />
-          </div>
+          </motion.div>
           <div className={styles.rowCv}>
-            <div className={styles.avatar}>
-              <img src="Profile.jpeg" alt="Avatar" />
-            </div>
-            <a className={styles.cv} href="Guilherme_Nobrega.pdf">
+            <motion.div initial={{ scale: 0, opacity: 0 }} whileInView={{ scale: 1, opacity: 1 }} viewport={{ once: true }} transition={{delay: 0.25}} className={styles.avatar}>
+              <img src="photo.jpg" alt="Avatar" />
+            </motion.div>
+            <motion.a initial={{ y: 24, opacity: 0 }} whileInView={{ y: 0, opacity: 1 }} viewport={{ once: true }} transition={{delay: 0.25}} className={styles.cv} href="Guilherme_Nobrega.pdf">
               Download CV
-            </a>
+            </motion.a>
           </div>
 
           <div className={styles.content}>
-            <div className={styles.name}>
+            <motion.div initial={{ y: 24, opacity: 0 }} whileInView={{ y: 0, opacity: 1 }} viewport={{ once: true }} transition={{delay: 0.3}} className={styles.name}>
               <p>Guilherme Nóbrega</p>
-              <Badge />
-            </div>
-            <p className={styles.desc}>
+              <Badge/>
+            </motion.div>
+            <motion.p initial={{ y: 24, opacity: 0 }} whileInView={{ y: 0, opacity: 1 }} viewport={{ once: true }} transition={{delay: 0.4}} className={styles.desc}>
               Transforming ideas into seamless code and innovative solutions,
               one line at a time. 🚀
-            </p>
-            <div className={styles.rowContents}>
+            </motion.p>
+            <motion.div initial={{ y: 24, opacity: 0 }} whileInView={{ y: 0, opacity: 1 }} viewport={{ once: true }} transition={{delay: 0.45}} className={styles.rowContents}>
               <span className={styles.rowDesc}>
                 <HiBriefcase />
                 <p>Working</p>
@@ -97,9 +97,9 @@ export default function Home() {
                 <HiCake />
                 <p>December, 1999</p>
               </span>
-            </div>
+            </motion.div>
           </div>
-          <div className={styles.rowIcons}>
+          <motion.div initial={{ y: 24, opacity: 0 }} whileInView={{ y: 0, opacity: 1 }} viewport={{ once: true }} transition={{delay: 0.5}} className={styles.rowIcons}>
             <a
               className={`${styles.rowIcon} ${styles.mail}`}
               target="_blank"
@@ -124,15 +124,15 @@ export default function Home() {
               <TbBrandInstagramFilled />
               Instagram
             </a>
-          </div>
+          </motion.div>
         </header>
         <main className={styles.main}>
           <div className={styles.columnMain}>
-            <div className={styles.centerTitle} style={{ marginTop: "7em" }}>
+            <motion.div initial={{ y: 24, opacity: 0 }} whileInView={{ y: 0, opacity: 1 }} viewport={{ once: true }} transition={{delay: 0.55}} className={styles.centerTitle} style={{ marginTop: "7em" }}>
               <h1>About</h1>
               <h1>Me</h1>
-            </div>
-            <div className={styles.simpTextBox}>
+            </motion.div>
+            <motion.div initial={{ y: 24, opacity: 0 }} whileInView={{ y: 0, opacity: 1 }} viewport={{ once: true }} transition={{delay: 0.55}} className={styles.simpTextBox}>
               <p className={styles.simpText}>
                 <b>Yooo! 🤙</b>
                 <br />
@@ -156,12 +156,12 @@ export default function Home() {
                 My mission is to deliver high-quality, robust solutions that
                 elevate user experiences and drive meaningful results.
               </p>
-            </div>
-            <div className={styles.centerTitle} style={{ marginTop: "7em" }}>
+            </motion.div>
+            <motion.div  initial={{ y: 24, opacity: 0 }} whileInView={{ y: 0, opacity: 1 }} viewport={{ once: true }} transition={{delay: 0.25}} className={styles.centerTitle} style={{ marginTop: "7em" }}>
               <h1>{work} years of</h1>
               <h1>Experience</h1>
-            </div>
-            <div className={styles.columnWork}>
+            </motion.div>
+            <motion.div  initial={{ y: 24, opacity: 0 }} whileInView={{ y: 0, opacity: 1 }} viewport={{ once: true }} transition={{delay: 0.25}} className={styles.columnWork}>
               <a
                 className={styles.boxWork}
                 target="_blank"
@@ -202,12 +202,39 @@ export default function Home() {
                   <TbChevronUpRight size={20} />
                 </div>
               </a>
-            </div>
-            <div className={styles.centerTitle} style={{ marginTop: "7em" }}>
+            </motion.div>
+            <motion.div initial={{ y: 24, opacity: 0 }} whileInView={{ y: 0, opacity: 1 }} viewport={{ once: true }} transition={{delay: 0.25}} className={styles.centerTitle} style={{ marginTop: "7em" }}>
+              <h1>Certificates</h1>
+              <h1>Owned</h1>
+            </motion.div>
+            <motion.div initial={{ y: 24, opacity: 0 }} whileInView={{ y: 0, opacity: 1 }} viewport={{ once: true }} transition={{delay: 0.25}} className={styles.gridCert}>
+              <div className={styles.boxCert}>
+              <div className={styles.certImg}>
+                <img src="nextUma.png"/>
+              </div>
+               <div className={styles.gridBoxCol}>
+                  <p className={styles.simpText}>08/11/2025</p>
+                  <p><b>Workshop Vozes do Marketing</b></p>
+                  <p><i>NextUMa</i></p>
+                </div>
+             </div>
+             <div className={styles.boxCert}>
+              <div className={styles.certImg}>
+                <img src="santander.jpg"/>
+              </div>
+                <div className={styles.gridBoxCol}>
+                  <p className={styles.simpText}>06/08/2024</p>
+                  <p><b>Gestão de Projetos e Fundamentos de métodos Agile</b></p>
+                  <p><i>Santander Open Academy</i></p>
+                </div>
+             </div>
+            
+            </motion.div>
+            <motion.div initial={{ y: 24, opacity: 0 }} whileInView={{ y: 0, opacity: 1 }} viewport={{ once: true }} transition={{delay: 0.25}} className={styles.centerTitle} style={{ marginTop: "7em" }}>
               <h1>Development</h1>
               <h1>Tools</h1>
-            </div>
-            <div className={styles.columnSkills}>
+            </motion.div>
+            <motion.div  initial={{ y: 24, opacity: 0 }} whileInView={{ y: 0, opacity: 1 }} viewport={{ once: true }} transition={{delay: 0.25}} className={styles.columnSkills}>
               <div className={styles.rowSkills}>
                 <div className={styles.iconSkills}>
                   <TbBrandReact />
@@ -289,7 +316,7 @@ export default function Home() {
                   <p>Version Control System</p>
                 </div>
               </div>
-            </div>
+            </motion.div>
           </div>
         </main>
         <footer className={styles.footer}>

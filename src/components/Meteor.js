@@ -1,6 +1,6 @@
 import React from "react";
 import styles from "./Meteor.module.css";
-
+import { motion } from "motion/react"
 export default function Meteor() {
   return (
     <div className={styles.container}>
