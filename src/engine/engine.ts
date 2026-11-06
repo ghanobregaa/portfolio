@@ -1169,6 +1169,15 @@ export function startEngine(): void {
     // ---------- Cartoon gloved hands that "work" each scene ----------
     // Hands are not particles: they are solid vector gloves drawn on top, moved by each scene.
     var HAND_SC = 1.12, POINT_TIP = [-21, -75];
+    // A cartoon click over one cycle f (0..1): lift a little, slam down, squash, bounce back.
+    // returns [height above the screen in glove units, press amount 0..1]
+    function clickCurve(f) {
+      if (f < 0.12) { var a1 = f / 0.12; return [8 * Math.sin(a1 * Math.PI / 2), 0]; }          // anticipation: pull back
+      if (f < 0.2) { var a2 = (f - 0.12) / 0.08; return [8 * (1 - a2) - 3 * a2, a2]; }          // fast press
+      if (f < 0.3) { var a3 = (f - 0.2) / 0.1; return [-3 + 3 * a3, 1 - a3 * 0.6]; }           // squash on the screen
+      if (f < 0.42) { var a4 = (f - 0.3) / 0.12; return [Math.sin(a4 * Math.PI) * 5, 0.4 * (1 - a4)]; } // bounce back
+      return [0, 0];
+    }
     function hand(pose, mirror, posFn, angFn, gripFn) { return { hand: true, pose: pose, mirror: mirror, posFn: posFn, angFn: angFn, gripFn: gripFn }; }
     function smooth01(x) { x = Math.max(0, Math.min(1, x)); return x * x * (3 - 2 * x); }
     // where to put a pointing hand so its fingertip lands on (x, y)
@@ -1243,10 +1252,11 @@ export function startEngine(): void {
           var taps = [[167, 107], [251, 155], [209, 203], [167, 251], [251, 107], [209, 155]], D = 0.85;
           var k = Math.floor(t / D) % taps.length, f = (t % D) / D, a0 = taps[k], a1 = taps[(k + 1) % taps.length];
           var e = f < 0.55 ? 0 : (f - 0.55) / 0.45; e = e * e * (3 - 2 * e);
-          var press = f < 0.3 ? Math.sin(f / 0.3 * Math.PI) * 7 : 0;
-          var q = [0, 0]; rot(a0[0] + (a1[0] - a0[0]) * e, a0[1] + (a1[1] - a0[1]) * e + 10 - press, 210, 210, tilt(t), q);
+          var cc = clickCurve(f);
+          var q = [0, 0]; rot(a0[0] + (a1[0] - a0[0]) * e, a0[1] + (a1[1] - a0[1]) * e + cc[0], 210, 210, tilt(t), q);
           return tipTo(q[0], q[1], -0.45, true);
-        }, function () { return -0.45; })
+        }, function (t) { var f = (t % 0.85) / 0.85; return -0.45 - clickCurve(f)[1] * 0.08; },
+        function (t) { return clickCurve((t % 0.85) / 0.85)[1]; })
       ]);
     }
 
@@ -1292,12 +1302,33 @@ export function startEngine(): void {
         if (tt < outAt + 0.28) { var e = 1 - (tt - outAt) / 0.28; return e * e; }
         return 0;
       }
+      // The hand follows a smooth path: it waits over each block, clicks it the moment it pops in,
+      // then rests in a corner while the page is complete and glides back to the start before the loop restarts.
+      function target(k) { var b = blocks[k]; return [b[0] + b[2] * 0.6, b[1] + b[3] * 0.55]; }
+      var REST = [344, 336], WP = [[0, target(0)]];
+      for (var k0 = 0; k0 < blocks.length; k0++) {
+        var at = 0.35 + k0 * 0.42;
+        WP.push([at - 0.08, target(k0)], [at + 0.14, target(k0)]);
+      }
+      WP.push([3.1, REST], [5.45, REST], [6.2, target(0)], [C, target(0)]);
       function cursorAt(t) {
-        var tt = t % C, k = Math.min(5, Math.max(0, Math.floor((tt - 0.1) / 0.42))), b = blocks[k], nb = blocks[Math.min(5, k + 1)];
-        var f = Math.min(1, Math.max(0, ((tt - 0.1) % 0.42) / 0.42)), e = f * f * (3 - 2 * f);
-        if (tt > 2.8) { b = blocks[5]; nb = b; e = 0; }
-        var x0 = b[0] + b[2] * 0.62, y0 = b[1] + b[3] * 0.6, x1 = nb[0] + nb[2] * 0.62, y1 = nb[1] + nb[3] * 0.6;
-        return [x0 + (x1 - x0) * e, y0 + (y1 - y0) * e];
+        var tt = t % C;
+        for (var w = 0; w < WP.length - 1; w++) {
+          var A = WP[w], B = WP[w + 1];
+          if (tt <= B[0]) {
+            var e = B[0] > A[0] ? (tt - A[0]) / (B[0] - A[0]) : 1; e = e * e * (3 - 2 * e);
+            return [A[1][0] + (B[1][0] - A[1][0]) * e, A[1][1] + (B[1][1] - A[1][1]) * e];
+          }
+        }
+        return target(0);
+      }
+      function webClick(t) {
+        var tt = t % C;
+        for (var k1 = 0; k1 < blocks.length; k1++) {
+          var start = 0.35 + k1 * 0.42 - 0.08, f = (tt - start) / 0.42;
+          if (f >= 0 && f < 0.45) return clickCurve(f);
+        }
+        return [Math.sin(tt * 2.2) * 2, 0]; // gentle hover while idle
       }
       var parts2 = [part(function () { o.lineWidth = 12; rr(32, 64, 356, 296, 22); o.stroke(); line(38, 108, 382, 108, 8); [60, 84, 108].forEach(function (x) { dot(x, 87, 7); }); }, null, 1.2)];
       blocks.forEach(function (b, k) {
@@ -1306,7 +1337,9 @@ export function startEngine(): void {
           out[0] = cx1 + (x - cx1) * s; out[1] = cy1 + (y - cy1) * s;
         }, 0.9));
       });
-      parts2.push(hand("point", true, function (t) { var p = cursorAt(t); return tipTo(p[0], p[1], -0.35, true); }, function () { return -0.35; }));
+      function webClick(t) { var tt = t % C; if (tt < 0.25 || tt > 2.9) return [0, 0]; return clickCurve(((tt - 0.25) % 0.42) / 0.42); }
+      parts2.push(hand("point", true, function (t) { var p = cursorAt(t), cc = webClick(t); return tipTo(p[0], p[1] + cc[0], -0.35, true); },
+        function (t) { return -0.35 - webClick(t)[1] * 0.08; }, function (t) { return webClick(t)[1]; }));
       return makeShape(parts2);
     }
     function wordmark() {
@@ -1389,8 +1422,9 @@ export function startEngine(): void {
       c = c || 0; t = t || 0;
       var P = [["p"]], K = [];
       if (pose === "point") {
-        var wag = Math.sin(t * 5) * 0.05;
-        chain(-17, -18, -0.06 + wag, [21, 16, 13], [0, 0.05, 0.06], 15, 1, P, K);
+        var wag = Math.sin(t * 5) * 0.05 * (1 - c);
+        var tip = chain(-17, -18, -0.06 + wag, [21 * (1 - 0.08 * c), 16 * (1 - 0.18 * c), 13 * (1 - 0.25 * c)], [0, 0.05 + 0.22 * c, 0.06 + 0.3 * c], 15 + 1.5 * c, 1, P, K);
+        P.tip = tip;
         // the other three fingers are folded down: only their knuckles show
         P.push(["c", -3, -17, 9.5, 0, 0, 2], ["c", 9.5, -16, 9.5, 0, 0, 3], ["c", 20.5, -13, 8.5, 0, 0, 4]);
         K.push([-3, -11, 0, 9], [9.5, -10, 0, 9], [20.5, -8, 0, 8]);
@@ -1409,7 +1443,7 @@ export function startEngine(): void {
         // thumb swings in and bends at its joint to meet the fingertips
         chain(-24, 14, -1.05 + 0.55 * c, [16, 14], [0, 0.25 + 0.65 * c], 15, 9, P, K);
       }
-      return { P: P, K: K };
+      return { P: P, K: K, tip: P.tip, press: pose === "point" ? c : 0 };
     }
     // Puffy, hand-inked glove: organic fingers with round tips, tapered ink creases and a soft wrist roll.
     // The ink "boils" (jitters slightly 8 times a second), like hand-drawn cartoon lines.
@@ -1484,26 +1518,22 @@ export function startEngine(): void {
       // white flash at the start
       if (e < 0.25) {
         var g = cx.createRadialGradient(x, y, 0, x, y, 90 * k);
-        g.addColorStop(0, "rgba(255,255,255," + (0.7 * (1 - e / 0.25)) + ")"); g.addColorStop(1, "rgba(255,255,255,0)");
+        g.addColorStop(0, "rgba(255,255,255," + (0.3 * (1 - e / 0.25)) + ")"); g.addColorStop(1, "rgba(255,255,255,0)");
         cx.fillStyle = g; cx.beginPath(); cx.arc(x, y, 90 * k, 0, Math.PI * 2); cx.fill();
       }
       for (var r = 0; r < n; r++) {
-        if (rnd(seed, r, frame) < 0.18) continue; // bolts blink on and off
-        var ang = r / n * Math.PI * 2 + rnd(seed, r, 0) * 0.7, len = (100 + rnd(seed, r, 1) * 90) * k * grow;
-        var x0 = x + Math.cos(ang) * 16 * k, y0 = y + Math.sin(ang) * 16 * k, x1 = x + Math.cos(ang) * len, y1 = y + Math.sin(ang) * len;
-        var pts = boltPoints(x0, y0, x1, y1, 0.55, seed + r, frame, 3);
-        // glow, then a bright core
-        cx.globalAlpha = fade * 0.9;
-        cx.shadowColor = col.ac || "#f7a8a9"; cx.shadowBlur = 14 * k;
-        cx.strokeStyle = col.ac || "#f7a8a9"; cx.lineWidth = 5 * k; strokePts(pts);
+        if (rnd(seed, r, frame) < 0.15) continue; // bolts blink on and off
+        // each bolt is a short spark that starts at the glove and shoots outwards
+        var ang = r / n * Math.PI * 2 + rnd(seed, r, 0) * 0.7;
+        var travel = Math.pow(Math.min(1, e / 0.85), 0.7), sp3 = 0.8 + rnd(seed, r, 1) * 0.5;
+        var d0 = (14 + travel * 80 * sp3) * k, blen = (26 + rnd(seed, r, 2) * 14) * k * (1 - e * 0.35);
+        var x0 = x + Math.cos(ang) * d0, y0 = y + Math.sin(ang) * d0, x1 = x + Math.cos(ang) * (d0 + blen), y1 = y + Math.sin(ang) * (d0 + blen);
+        var pts = boltPoints(x0, y0, x1, y1, 0.6, seed + r, frame, 3);
+        cx.globalAlpha = fade * 0.42;
+        cx.shadowColor = col.ac || "#f7a8a9"; cx.shadowBlur = 8 * k;
+        cx.strokeStyle = col.ac || "#f7a8a9"; cx.lineWidth = 4.2 * k; strokePts(pts);
         cx.shadowBlur = 0;
-        cx.strokeStyle = col.fg; cx.lineWidth = 2.2 * k; strokePts(pts);
-        // a small fork off the middle of the bolt
-        var mid = pts[Math.floor(pts.length * (0.4 + rnd(seed, r, frame + 7) * 0.3))], fa = ang + (rnd(seed, r, frame + 9) < 0.5 ? -0.7 : 0.7);
-        var fl = len * 0.35, fork = boltPoints(mid[0], mid[1], mid[0] + Math.cos(fa) * fl, mid[1] + Math.sin(fa) * fl, 0.5, seed + r + 40, frame, 5);
-        cx.globalAlpha = fade * 0.75;
-        cx.strokeStyle = col.ac || "#f7a8a9"; cx.lineWidth = 2.6 * k; strokePts(fork);
-        cx.strokeStyle = col.fg; cx.lineWidth = 1.1 * k; strokePts(fork);
+        cx.strokeStyle = col.fg; cx.lineWidth = 1.8 * k; strokePts(pts);
       }
       cx.restore();
     }
@@ -1513,7 +1543,7 @@ export function startEngine(): void {
       var sx = ox + (p[0] / S - 0.5) * scale, sy = oy + (p[1] / S - 0.5) * scale;
       spellRays(sx, sy, alpha, k, seed || 0);
       var pop = 0.55 + 0.45 * easeOutBack(Math.min(1, alpha));
-      var grip = hd.gripFn ? Math.min(0.82, hd.gripFn(time)) : 0;
+      var grip = hd.gripFn ? Math.min(hd.pose === "point" ? 1 : 0.82, hd.gripFn(time)) : 0;
       var gPrev = hd.gripFn ? Math.min(0.82, hd.gripFn(time - 0.06)) : 0;
       var pPrev = hd.posFn(time - 0.06);
       // cartoon timing: squash when the fingers close, stretch when the hand moves fast, plus a little wobble
@@ -1556,6 +1586,17 @@ export function startEngine(): void {
         var x1 = kk[0] - ca * hl, y1 = kk[1] - sa * hl, x2 = kk[0] + ca * hl, y2 = kk[1] + sa * hl;
         taper(x1, y1 + j(40 + n4) * 0.4, kk[0] + sa * 2, kk[1] - ca * 2, x2, y2, 1.9);
       });
+      // impact lines around the fingertip on a click
+      if (hd.pose === "point" && GP.tip && grip > 0.35) {
+        var ia = (grip - 0.35) / 0.65, tx2 = GP.tip[0], ty2 = GP.tip[1] - 6;
+        cx.fillStyle = col.fg === "#ffffff" || col.fg === "#fafafa" ? "#ffffff" : ink;
+        cx.globalAlpha = Math.min(1, alpha * 1.6) * ia;
+        [-1.15, -0.55, 0.55, 1.15].forEach(function (aa, n5) {
+          var r1 = 16 + (1 - ia) * 6, r2 = r1 + 9 + ia * 7, dir = aa - Math.PI / 2;
+          taper(tx2 + Math.cos(dir) * r1, ty2 + Math.sin(dir) * r1, tx2 + Math.cos(dir) * (r1 + r2) / 2 + n5 * 0.3, ty2 + Math.sin(dir) * (r1 + r2) / 2,
+                tx2 + Math.cos(dir) * r2, ty2 + Math.sin(dir) * r2, 3.4);
+        });
+      }
       cx.restore();
     }
     (function loop(ts) {
