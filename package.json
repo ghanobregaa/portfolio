@@ -1,45 +1,33 @@
 {
   "homepage": "http://ghanobregaa.github.io/portfolio/",
   "name": "portfolio",
-  "version": "0.1.0",
   "private": true,
-  "dependencies": {
-    "cra-template": "1.2.0",
-    "motion": "^12.23.25",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "react-icons": "^5.4.0",
-    "react-router-dom": "^7.1.2",
-    "react-scripts": "^5.0.1",
-    "web-vitals": "^4.2.4"
-  },
+  "version": "1.0.0",
+  "type": "module",
   "scripts": {
     "predeploy": "npm run build",
-    "deploy": "gh-pages -d build",
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "deploy": "gh-pages -d dist",
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview"
   },
-  "eslintConfig": {
-    "extends": [
-      "react-app",
-      "react-app/jest"
-    ]
-  },
-  "browserslist": {
-    "production": [
-      ">0.2%",
-      "not dead",
-      "not op_mini all"
-    ],
-    "development": [
-      "last 1 chrome version",
-      "last 1 firefox version",
-      "last 1 safari version"
-    ]
+  "dependencies": {
+    "@radix-ui/react-slot": "1.1.1",
+    "class-variance-authority": "0.7.1",
+    "clsx": "2.1.1",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "tailwind-merge": "2.6.0"
   },
   "devDependencies": {
+    "@tailwindcss/vite": "4.1.4",
+    "@types/node": "22.10.5",
+    "@types/react": "18.3.18",
+    "@types/react-dom": "18.3.5",
+    "@vitejs/plugin-react": "4.3.4",
+    "tailwindcss": "4.1.4",
+    "typescript": "5.7.3",
+    "vite": "6.0.11",
     "gh-pages": "^6.3.0"
   }
 }
