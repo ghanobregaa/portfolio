@@ -29,7 +29,7 @@ export function Playground() {
           <div className="race" data-reveal>
             <div className="race-head">
               <div className="racer"><small>you</small><b id="r-you">0</b><span>wpm</span></div>
-              <div className="racer ghost"><small>my ghost</small><b id="r-ghost">46</b><span>wpm</span></div>
+              <div className="racer ghost"><small>my ghost</small><b id="r-ghost">35</b><span>wpm</span></div>
               <div className="racer"><small>time</small><b id="r-time">0.0</b><span>s</span></div>
             </div>
             <div className="race-track">

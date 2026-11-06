@@ -895,7 +895,7 @@ export function startEngine(): void {
   var raceText = document.getElementById("race-text"), raceIn = document.getElementById("race-input"), raceBox = document.getElementById("race-box");
   var rYou = document.getElementById("r-you"), rTime = document.getElementById("r-time"), raceMsg = document.getElementById("race-msg");
   var runYou = document.getElementById("run-you"), runGhost = document.getElementById("run-ghost"), raceEl = document.querySelector(".race");
-  var GHOST_WPM = 46, ghostCps = GHOST_WPM * 5 / 60, snippet = "", spans = [], raceT0 = 0, raceOn = false, raceDone = false, ghostDoneAt = 0, si = -1;
+  var GHOST_WPM = 35, ghostCps = GHOST_WPM * 5 / 60, snippet = "", spans = [], raceT0 = 0, raceOn = false, raceDone = false, ghostDoneAt = 0, si = -1;
   function norm(t) { return t.replace(/[‘’]/g, "'").replace(/[“”]/g, '"'); }
   function newRace() {
     si = (si + 1 + Math.floor(Math.random() * (SNIPPETS.length - 1))) % SNIPPETS.length;
@@ -1141,7 +1141,6 @@ export function startEngine(): void {
     function part(draw, fn, weight) { clear(); draw(); return { pts: grab(), fn: fn || null, w: weight || 1 }; }
     function rot(x, y, cx0, cy0, a, out) { var c = Math.cos(a), s = Math.sin(a), dx = x - cx0, dy = y - cy0; out[0] = cx0 + dx * c - dy * s; out[1] = cy0 + dx * s + dy * c; }
     function makeShape(parts) {
-      var hands = parts.filter(function (p) { return p && p.hand; });
       parts = parts.filter(function (p) { return p && p.pts && p.pts.length; });
       var total = parts.reduce(function (a, p) { return a + p.pts.length / 2 * p.w; }, 0);
       var pi = new Uint16Array(N), bx = new Float32Array(N), by = new Float32Array(N), idx = 0;
@@ -1157,7 +1156,7 @@ export function startEngine(): void {
         pi[i] = pi[j2]; bx[i] = bx[j2]; by[i] = by[j2]; pi[j2] = t1; bx[j2] = t2; by[j2] = t3;
       }
       var out = [0, 0];
-      return { hands: hands, evalAll: function (t, buf) {
+      return { evalAll: function (t, buf) {
         for (var i = 0; i < N; i++) {
           var p = parts[pi[i]];
           if (p.fn) p.fn(t, bx[i], by[i], out, i); else { out[0] = bx[i]; out[1] = by[i]; }
@@ -1166,27 +1165,7 @@ export function startEngine(): void {
       } };
     }
     function bob(t) { return Math.sin(t * 2.2) * 5; }
-    // ---------- Cartoon gloved hands that "work" each scene ----------
-    // Hands are not particles: they are solid vector gloves drawn on top, moved by each scene.
-    var HAND_SC = 1.12, POINT_TIP = [-21, -75];
-    // A cartoon click over one cycle f (0..1): lift a little, slam down, squash, bounce back.
-    // returns [height above the screen in glove units, press amount 0..1]
-    function clickCurve(f) {
-      if (f < 0.12) { var a1 = f / 0.12; return [8 * Math.sin(a1 * Math.PI / 2), 0]; }          // anticipation: pull back
-      if (f < 0.2) { var a2 = (f - 0.12) / 0.08; return [8 * (1 - a2) - 3 * a2, a2]; }          // fast press
-      if (f < 0.3) { var a3 = (f - 0.2) / 0.1; return [-3 + 3 * a3, 1 - a3 * 0.6]; }           // squash on the screen
-      if (f < 0.42) { var a4 = (f - 0.3) / 0.12; return [Math.sin(a4 * Math.PI) * 5, 0.4 * (1 - a4)]; } // bounce back
-      return [0, 0];
-    }
-    function hand(pose, mirror, posFn, angFn, gripFn) { return { hand: true, pose: pose, mirror: mirror, posFn: posFn, angFn: angFn, gripFn: gripFn }; }
-    function smooth01(x) { x = Math.max(0, Math.min(1, x)); return x * x * (3 - 2 * x); }
-    // where to put a pointing hand so its fingertip lands on (x, y)
-    function tipTo(x, y, a, mirror) {
-      var tx = POINT_TIP[0] * HAND_SC * (mirror ? -1 : 1), ty = POINT_TIP[1] * HAND_SC, c = Math.cos(a), s = Math.sin(a);
-      return [x - (tx * c - ty * s), y - (tx * s + ty * c)];
-    }
-
-    // ---------- Automation: two meshing gears, cranked by hand ----------
+    // ---------- Automation: two meshing gears that never stop ----------
     function gearPath(cx0, cy0, rOut, rIn, teeth) {
       o.beginPath();
       for (var k = 0; k < teeth * 4; k++) {
@@ -1195,17 +1174,6 @@ export function startEngine(): void {
         if (k) o.lineTo(px, py); else o.moveTo(px, py);
       }
       o.closePath();
-    }
-    function crankGrip(t) {
-      var f = (t % 2.8) / 2.8;
-      if (f < 0.74) return 1;
-      if (f < 0.82) return 1 - smooth01((f - 0.74) / 0.08);
-      if (f > 0.9) return smooth01((f - 0.9) / 0.1);
-      return 0;
-    }
-    function crank(t, th0, w) {
-      var C = 2.8, f = (t % C) / C, span = w * C * 0.78;
-      return th0 + span * (f < 0.78 ? f / 0.78 : 1 - (f - 0.78) / 0.22);
     }
     function automation() {
       var B = [168, 248], Sm = [294, 142], wB = 0.32, ratio = 12 / 8;
@@ -1220,13 +1188,7 @@ export function startEngine(): void {
           gearPath(Sm[0], Sm[1], 74, 58, 8); o.fill();
           o.globalCompositeOperation = "destination-out"; dot(Sm[0], Sm[1], 30); o.globalCompositeOperation = "source-over";
           dot(Sm[0], Sm[1], 11);
-        }, function (t, x, y, out) { rot(x, y, Sm[0], Sm[1], -t * wB * ratio + Math.PI / 8, out); }),
-        // left hand rides the big gear for a while, then lets go and grabs it again
-        hand("open", false, function (t) { var th = crank(t, 2.35, wB); return [B[0] + Math.cos(th) * 122, B[1] + Math.sin(th) * 122]; },
-             function (t) { return crank(t, 2.35, wB) - Math.PI / 2; }, crankGrip),
-        // right hand pushes the small gear the other way
-        hand("open", true, function (t) { var th = crank(t + 1.3, -0.55, -wB * ratio); return [Sm[0] + Math.cos(th) * 92, Sm[1] + Math.sin(th) * 92]; },
-             function (t) { return crank(t + 1.3, -0.55, -wB * ratio) - Math.PI / 2; }, function (t) { return crankGrip(t + 1.3); })
+        }, function (t, x, y, out) { rot(x, y, Sm[0], Sm[1], -t * wB * ratio + Math.PI / 8, out); })
       ]);
     }
 
@@ -1246,17 +1208,7 @@ export function startEngine(): void {
                rot(icx + (x - icx) * s, icy + (y - icy) * s + lift, 210, 210, tilt(t), out);
              }, 1.6),
         part(function () { rr(146, 300, 128, 46, 16); o.lineWidth = 6; o.stroke(); [174, 210, 246].forEach(function (dx) { dot(dx, 323, 9); }); },
-             function (t, x, y, out) { rot(x, y, 210, 210, tilt(t), out); }, 0.8),
-        // the other taps the icons one after another
-        hand("point", true, function (t) {
-          var taps = [[167, 107], [251, 155], [209, 203], [167, 251], [251, 107], [209, 155]], D = 0.85;
-          var k = Math.floor(t / D) % taps.length, f = (t % D) / D, a0 = taps[k], a1 = taps[(k + 1) % taps.length];
-          var e = f < 0.55 ? 0 : (f - 0.55) / 0.45; e = e * e * (3 - 2 * e);
-          var cc = clickCurve(f);
-          var q = [0, 0]; rot(a0[0] + (a1[0] - a0[0]) * e, a0[1] + (a1[1] - a0[1]) * e + cc[0], 210, 210, tilt(t), q);
-          return tipTo(q[0], q[1], -0.45, true);
-        }, function (t) { var f = (t % 0.85) / 0.85; return -0.45 - clickCurve(f)[1] * 0.08; },
-        function (t) { return clickCurve((t % 0.85) / 0.85)[1]; })
+             function (t, x, y, out) { rot(x, y, 210, 210, tilt(t), out); }, 0.8)
       ]);
     }
 
@@ -1282,11 +1234,7 @@ export function startEngine(): void {
           if (life < 0 || life > 1) { out[0] = 232 + ((i % 9) - 4); out[1] = 210 + ((i % 5) - 2) * 4; return; }
           var a = (i * 2.399) % (Math.PI * 2), sp = 40 + (i % 11) * 9;
           out[0] = 232 + Math.cos(a) * sp * life; out[1] = 210 + Math.sin(a) * sp * life * 0.8;
-        }, 2.6),
-        hand("open", false, function (t) { return [114 - gap(t) * 46, 132 + Math.sin(t * 2) * 2]; }, function () { return Math.PI + 0.12; },
-             function (t) { var f = phase(t); return 0.95 - 0.5 * Math.max(0, Math.sin(Math.max(0, f - 0.34) / 0.3 * Math.PI)) * (f > 0.34 && f < 0.64 ? 1 : 0); }),
-        hand("open", true, function (t) { return [304 + gap(t) * 46, 132 + Math.sin(t * 2 + 1) * 2]; }, function () { return Math.PI - 0.12; },
-             function () { return 0.95; })
+        }, 2.6)
       ]);
     }
 
@@ -1302,34 +1250,6 @@ export function startEngine(): void {
         if (tt < outAt + 0.28) { var e = 1 - (tt - outAt) / 0.28; return e * e; }
         return 0;
       }
-      // The hand follows a smooth path: it waits over each block, clicks it the moment it pops in,
-      // then rests in a corner while the page is complete and glides back to the start before the loop restarts.
-      function target(k) { var b = blocks[k]; return [b[0] + b[2] * 0.6, b[1] + b[3] * 0.55]; }
-      var REST = [344, 336], WP = [[0, target(0)]];
-      for (var k0 = 0; k0 < blocks.length; k0++) {
-        var at = 0.35 + k0 * 0.42;
-        WP.push([at - 0.08, target(k0)], [at + 0.14, target(k0)]);
-      }
-      WP.push([3.1, REST], [5.45, REST], [6.2, target(0)], [C, target(0)]);
-      function cursorAt(t) {
-        var tt = t % C;
-        for (var w = 0; w < WP.length - 1; w++) {
-          var A = WP[w], B = WP[w + 1];
-          if (tt <= B[0]) {
-            var e = B[0] > A[0] ? (tt - A[0]) / (B[0] - A[0]) : 1; e = e * e * (3 - 2 * e);
-            return [A[1][0] + (B[1][0] - A[1][0]) * e, A[1][1] + (B[1][1] - A[1][1]) * e];
-          }
-        }
-        return target(0);
-      }
-      function webClick(t) {
-        var tt = t % C;
-        for (var k1 = 0; k1 < blocks.length; k1++) {
-          var start = 0.35 + k1 * 0.42 - 0.08, f = (tt - start) / 0.42;
-          if (f >= 0 && f < 0.45) return clickCurve(f);
-        }
-        return [Math.sin(tt * 2.2) * 2, 0]; // gentle hover while idle
-      }
       var parts2 = [part(function () { o.lineWidth = 12; rr(32, 64, 356, 296, 22); o.stroke(); line(38, 108, 382, 108, 8); [60, 84, 108].forEach(function (x) { dot(x, 87, 7); }); }, null, 1.2)];
       blocks.forEach(function (b, k) {
         parts2.push(part(function () { rr(b[0], b[1], b[2], b[3], b[3] < 30 ? 6 : 12); o.fill(); }, function (t, x, y, out) {
@@ -1337,9 +1257,6 @@ export function startEngine(): void {
           out[0] = cx1 + (x - cx1) * s; out[1] = cy1 + (y - cy1) * s;
         }, 0.9));
       });
-      function webClick(t) { var tt = t % C; if (tt < 0.25 || tt > 2.9) return [0, 0]; return clickCurve(((tt - 0.25) % 0.42) / 0.42); }
-      parts2.push(hand("point", true, function (t) { var p = cursorAt(t), cc = webClick(t); return tipTo(p[0], p[1] + cc[0], -0.35, true); },
-        function (t) { return -0.35 - webClick(t)[1] * 0.08; }, function (t) { return webClick(t)[1]; }));
       return makeShape(parts2);
     }
     function wordmark() {
@@ -1398,207 +1315,6 @@ export function startEngine(): void {
     var target = -1, prevStage = 0, switchAt = -1e9;
     addEventListener("scroll", readScroll, { passive: true }); readScroll();
     var fr = 0;
-    // ---------- vector cartoon glove ----------
-    function capsule(x1, y1, x2, y2, w) { cx.lineWidth = w; cx.beginPath(); cx.moveTo(x1, y1); cx.lineTo(x2, y2); cx.stroke(); }
-    // Glove skeleton in glove units (palm centre near 0,0, fingers pointing up).
-    // Every finger is a chain of phalanges; c (0..1) curls each joint a bit more than the one before.
-    var FINGERS = [
-      { bx: -19, by: -17, spread: -0.13, len: [19, 14, 11], w: 14.5 },
-      { bx: -6.5, by: -20, spread: -0.04, len: [21, 15, 12], w: 15 },
-      { bx: 6.5, by: -20, spread: 0.05, len: [20, 14, 11], w: 15 },
-      { bx: 19, by: -16, spread: 0.15, len: [15, 11, 9], w: 13.5 }
-    ];
-    function chain(x, y, ang, lens, bends, w, id, P, K) {
-      for (var s = 0; s < lens.length; s++) {
-        ang += bends[s];
-        var x2 = x + Math.sin(ang) * lens[s], y2 = y - Math.cos(ang) * lens[s];
-        P.push(["l", x, y, x2, y2, w * (1 - s * 0.04), id]);
-        if (s > 0 && lens[s] > 5) K.push([x, y, ang - bends[s] / 2, w * 0.6]);
-        x = x2; y = y2;
-      }
-      return [x, y];
-    }
-    function gloveParts(pose, c, t) {
-      c = c || 0; t = t || 0;
-      var P = [["p"]], K = [];
-      if (pose === "point") {
-        var wag = Math.sin(t * 5) * 0.05 * (1 - c);
-        var tip = chain(-17, -18, -0.06 + wag, [21 * (1 - 0.08 * c), 16 * (1 - 0.18 * c), 13 * (1 - 0.25 * c)], [0, 0.05 + 0.22 * c, 0.06 + 0.3 * c], 15 + 1.5 * c, 1, P, K);
-        P.tip = tip;
-        // the other three fingers are folded down: only their knuckles show
-        P.push(["c", -3, -17, 9.5, 0, 0, 2], ["c", 9.5, -16, 9.5, 0, 0, 3], ["c", 20.5, -13, 8.5, 0, 0, 4]);
-        K.push([-3, -11, 0, 9], [9.5, -10, 0, 9], [20.5, -8, 0, 8]);
-        chain(-24, 12, -1.15, [14, 12], [0, 0.35], 14.5, 5, P, K);
-      } else {
-        FINGERS.forEach(function (fg, k) {
-          var wig = Math.sin(t * 7 + k * 1.3) * 0.07 * (1 - c);
-          // curling towards the viewer: the fingers stay side by side, the outer phalanges fold under
-          // (they get shorter) so the hand grips with its fingertips
-          var toward = fg.bx > 0 ? -1 : 1;
-          var bends = [0, 0.1 * c * toward + wig * 0.6, 0.12 * c * toward + wig];
-          var fold = [0.1, 0.5, 0.78];
-          var lens = fg.len.map(function (l, s) { return Math.max(3, l * (1 - c * fold[s])); });
-          chain(fg.bx, fg.by, fg.spread * (1 - 0.5 * c), lens, bends, fg.w, k + 1, P, K);
-        });
-        // thumb swings in and bends at its joint to meet the fingertips
-        chain(-24, 14, -1.05 + 0.55 * c, [16, 14], [0, 0.25 + 0.65 * c], 15, 9, P, K);
-      }
-      return { P: P, K: K, tip: P.tip, press: pose === "point" ? c : 0 };
-    }
-    // Puffy, hand-inked glove: organic fingers with round tips, tapered ink creases and a soft wrist roll.
-    // The ink "boils" (jitters slightly 8 times a second), like hand-drawn cartoon lines.
-    function boil(t, seed, amp) { var x = Math.sin((Math.floor(t * 8) * 12.9898 + seed * 78.233)) * 43758.5453; return ((x - Math.floor(x)) - 0.5) * 2 * amp; }
-    function fingerPath(x1, y1, x2, y2, w, grow) {
-      var dx = x2 - x1, dy = y2 - y1, L = Math.hypot(dx, dy) || 1, ux = dx / L, uy = dy / L, nx = -uy, ny = ux;
-      var hb = w * 0.54 + grow, hm = w * 0.47 + grow, rt = w * 0.57 + grow;
-      var bx = x1 - ux * 3, by = y1 - uy * 3, mx2 = x1 + ux * L * 0.55, my2 = y1 + uy * L * 0.55;
-      cx.beginPath();
-      cx.moveTo(bx - nx * hb, by - ny * hb);
-      cx.quadraticCurveTo(x1 + ux * L * 0.25 - nx * hm, y1 + uy * L * 0.25 - ny * hm, mx2 - nx * hm, my2 - ny * hm);
-      cx.quadraticCurveTo(x2 - ux * rt * 0.6 - nx * hm, y2 - uy * rt * 0.6 - ny * hm, x2 - nx * rt, y2 - ny * rt);
-      var a0 = Math.atan2(-ny, -nx); cx.arc(x2, y2, rt, a0, a0 + Math.PI, false);
-      cx.quadraticCurveTo(x2 - ux * rt * 0.6 + nx * hm, y2 - uy * rt * 0.6 + ny * hm, mx2 + nx * hm, my2 + ny * hm);
-      cx.quadraticCurveTo(x1 + ux * L * 0.25 + nx * hm, y1 + uy * L * 0.25 + ny * hm, bx + nx * hb, by + ny * hb);
-      cx.closePath(); cx.fill();
-    }
-    function taper(p0x, p0y, p1x, p1y, p2x, p2y, w) {
-      var L = [], R = [], n = 12;
-      for (var i = 0; i <= n; i++) {
-        var s = i / n, a = (1 - s) * (1 - s), b = 2 * (1 - s) * s, c2 = s * s;
-        var x = a * p0x + b * p1x + c2 * p2x, y = a * p0y + b * p1y + c2 * p2y;
-        var tx = 2 * (1 - s) * (p1x - p0x) + 2 * s * (p2x - p1x), ty = 2 * (1 - s) * (p1y - p0y) + 2 * s * (p2y - p1y), tl = Math.hypot(tx, ty) || 1;
-        var hw = w * 0.5 * Math.pow(Math.sin(Math.PI * s), 0.7);
-        L.push([x - ty / tl * hw, y + tx / tl * hw]); R.push([x + ty / tl * hw, y - tx / tl * hw]);
-      }
-      cx.beginPath(); cx.moveTo(L[0][0], L[0][1]);
-      for (var j = 1; j < L.length; j++) cx.lineTo(L[j][0], L[j][1]);
-      for (var k2 = R.length - 1; k2 >= 0; k2--) cx.lineTo(R[k2][0], R[k2][1]);
-      cx.closePath(); cx.fill();
-    }
-    function palmPath(grow) {
-      var x = -28 - grow, y = -22 - grow, w = 56 + grow * 2, h = 50 + grow * 2, r = 16 + grow;
-      cx.beginPath(); cx.moveTo(x + r, y); cx.quadraticCurveTo(x + w / 2, y - 3, x + w - r, y);
-      cx.quadraticCurveTo(x + w, y, x + w, y + r); cx.quadraticCurveTo(x + w + 2, y + h / 2, x + w - 2, y + h - r);
-      cx.quadraticCurveTo(x + w - 3, y + h, x + w - r - 2, y + h); cx.lineTo(x + r + 2, y + h);
-      cx.quadraticCurveTo(x + 3, y + h, x + 2, y + h - r); cx.quadraticCurveTo(x - 2, y + h / 2, x, y + r);
-      cx.quadraticCurveTo(x, y, x + r, y); cx.closePath(); cx.fill();
-    }
-    function shapePath(q, grow) {
-      if (q[0] === "p") { palmPath(grow); return; }
-      if (q[0] === "l") { capsule(q[1], q[2], q[3], q[4], q[5] + grow * 2); return; }
-      if (q[0] === "e") { cx.beginPath(); cx.ellipse(q[1], q[2], q[3] + grow, q[4] + grow, 0, 0, Math.PI * 2); cx.fill(); }
-      else if (q[0] === "c") { cx.beginPath(); cx.arc(q[1], q[2], q[3] + grow, 0, Math.PI * 2); cx.fill(); }
-      else fingerPath(q[1], q[2], q[3], q[4], q[5], grow);
-    }
-    function wrist(grow) { cx.beginPath(); cx.ellipse(0, 32, 26 + grow, 13 + grow, 0, 0, Math.PI * 2); cx.fill(); }
-    function easeOutBack(x) { var c1 = 2.2; return 1 + (c1 + 1) * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2); }
-    function rnd(a, b2, c3) { var x = Math.sin(a * 12.9898 + b2 * 78.233 + c3 * 37.719) * 43758.5453; return x - Math.floor(x); }
-    // jagged bolt from (x0,y0) to (x1,y1): midpoint displacement, re-rolled a few times a second so it flickers
-    function boltPoints(x0, y0, x1, y1, rough, s1, s2, s3) {
-      var pts = [[x0, y0], [x1, y1]];
-      for (var it = 0; it < 4; it++) {
-        var next = [pts[0]];
-        for (var i = 0; i < pts.length - 1; i++) {
-          var A = pts[i], B = pts[i + 1], mx3 = (A[0] + B[0]) / 2, my3 = (A[1] + B[1]) / 2;
-          var dx = B[0] - A[0], dy = B[1] - A[1], L = Math.hypot(dx, dy) || 1;
-          var off = (rnd(s1 + it, s2 + i, s3) - 0.5) * rough * L;
-          next.push([mx3 - dy / L * off, my3 + dx / L * off], B);
-        }
-        pts = next; rough *= 0.62;
-      }
-      return pts;
-    }
-    function strokePts(pts) { cx.beginPath(); cx.moveTo(pts[0][0], pts[0][1]); for (var i = 1; i < pts.length; i++) cx.lineTo(pts[i][0], pts[i][1]); cx.stroke(); }
-    function spellRays(x, y, e, k, seed) {
-      // lightning bolts crack out of the glove while it appears, then fade
-      if (e >= 1) return;
-      var frame = Math.floor(e * 16), n = 7, grow = Math.min(1, e / 0.35), fade = e < 0.55 ? 1 : 1 - (e - 0.55) / 0.45;
-      cx.save();
-      cx.lineCap = "round"; cx.lineJoin = "round";
-      // white flash at the start
-      if (e < 0.25) {
-        var g = cx.createRadialGradient(x, y, 0, x, y, 90 * k);
-        g.addColorStop(0, "rgba(255,255,255," + (0.3 * (1 - e / 0.25)) + ")"); g.addColorStop(1, "rgba(255,255,255,0)");
-        cx.fillStyle = g; cx.beginPath(); cx.arc(x, y, 90 * k, 0, Math.PI * 2); cx.fill();
-      }
-      for (var r = 0; r < n; r++) {
-        if (rnd(seed, r, frame) < 0.15) continue; // bolts blink on and off
-        // each bolt is a short spark that starts at the glove and shoots outwards
-        var ang = r / n * Math.PI * 2 + rnd(seed, r, 0) * 0.7;
-        var travel = Math.pow(Math.min(1, e / 0.85), 0.7), sp3 = 0.8 + rnd(seed, r, 1) * 0.5;
-        var d0 = (14 + travel * 80 * sp3) * k, blen = (26 + rnd(seed, r, 2) * 14) * k * (1 - e * 0.35);
-        var x0 = x + Math.cos(ang) * d0, y0 = y + Math.sin(ang) * d0, x1 = x + Math.cos(ang) * (d0 + blen), y1 = y + Math.sin(ang) * (d0 + blen);
-        var pts = boltPoints(x0, y0, x1, y1, 0.6, seed + r, frame, 3);
-        cx.globalAlpha = fade * 0.42;
-        cx.shadowColor = col.ac || "#f7a8a9"; cx.shadowBlur = 8 * k;
-        cx.strokeStyle = col.ac || "#f7a8a9"; cx.lineWidth = 4.2 * k; strokePts(pts);
-        cx.shadowBlur = 0;
-        cx.strokeStyle = col.fg; cx.lineWidth = 1.8 * k; strokePts(pts);
-      }
-      cx.restore();
-    }
-    function drawGlove(hd, time, alpha, seed) {
-      if (alpha <= 0) return;
-      var p = hd.posFn(time), a = hd.angFn(time), k = HAND_SC * scale / S;
-      var sx = ox + (p[0] / S - 0.5) * scale, sy = oy + (p[1] / S - 0.5) * scale;
-      spellRays(sx, sy, alpha, k, seed || 0);
-      var pop = 0.55 + 0.45 * easeOutBack(Math.min(1, alpha));
-      var grip = hd.gripFn ? Math.min(hd.pose === "point" ? 1 : 0.82, hd.gripFn(time)) : 0;
-      var gPrev = hd.gripFn ? Math.min(0.82, hd.gripFn(time - 0.06)) : 0;
-      var pPrev = hd.posFn(time - 0.06);
-      // cartoon timing: squash when the fingers close, stretch when the hand moves fast, plus a little wobble
-      var vel = Math.hypot(p[0] - pPrev[0], p[1] - pPrev[1]) / 0.06;
-      var sq = Math.max(-0.16, Math.min(0.16, (grip - gPrev) / 0.06 * 0.05));
-      var st = Math.min(0.18, vel / 900);
-      a += Math.sin(time * 6.5 + (hd.mirror ? 1.7 : 0)) * 0.05;
-      var GP = gloveParts(hd.pose, grip, time), parts3 = GP.P, ink = "#0d0d0d", ow = 2.4, bt = reduce ? 0 : time;
-      cx.save();
-      cx.globalAlpha = Math.min(1, alpha * 1.6);
-      var bob = Math.sin(time * 4 + (hd.mirror ? 2 : 0)) * 2 * k;
-      cx.translate(sx, sy + bob); cx.rotate(a);
-      cx.scale(k * pop * (hd.mirror ? -1 : 1) * (1 + sq - st * 0.5), k * pop * (1 - sq + st));
-      cx.lineCap = "round"; cx.lineJoin = "round";
-      cx.strokeStyle = ink;
-      // silhouette in ink (outer outline on light backgrounds) with a soft drop shadow
-      cx.shadowColor = "rgba(0,0,0,0.35)"; cx.shadowBlur = 16 * k; cx.shadowOffsetY = 5 * k;
-      cx.fillStyle = ink;
-      cx.strokeStyle = ink; parts3.forEach(function (q) { shapePath(q, ow + boil(bt, 1, 0.35)); });
-      wrist(ow);
-      cx.shadowColor = "transparent";
-      // white glove: wrist roll, then fingers (each one inked as a single piece so its joint has no seam),
-      // then the palm on top so the fingers grow cleanly out of it
-      cx.fillStyle = "#ffffff"; wrist(0);
-      var ids = [];
-      for (var q = 1; q < parts3.length; q++) if (ids.indexOf(parts3[q][6]) < 0) ids.push(parts3[q][6]);
-      ids.forEach(function (id) {
-        cx.fillStyle = ink; cx.strokeStyle = ink; parts3.forEach(function (q3, n3) { if (n3 && q3[6] === id) shapePath(q3, 1.25); });
-        cx.fillStyle = "#ffffff"; cx.strokeStyle = "#ffffff"; parts3.forEach(function (q3, n3) { if (n3 && q3[6] === id) shapePath(q3, 0); });
-      });
-      cx.fillStyle = "#ffffff"; shapePath(parts3[0], 0);
-      // tapered ink creases, like a brush pen
-      cx.fillStyle = ink;
-      var j = function (s2) { return boil(bt, s2, 0.7); };
-      taper(-14 + j(2), 6 + j(3), -2, 12 + j(4), 10 + j(5), 6 + j(6), 2.4);                 // palm crease
-      taper(-22, 26 + j(7), 0, 22 + j(8), 22, 26 + j(9), 2.4);                              // where the palm meets the wrist roll
-      // a crease across every finger joint, so the fingers clearly bend
-      GP.K.forEach(function (kk, n4) {
-        var ca = Math.cos(kk[2]), sa = Math.sin(kk[2]), hl = kk[3] / 2;
-        var x1 = kk[0] - ca * hl, y1 = kk[1] - sa * hl, x2 = kk[0] + ca * hl, y2 = kk[1] + sa * hl;
-        taper(x1, y1 + j(40 + n4) * 0.4, kk[0] + sa * 2, kk[1] - ca * 2, x2, y2, 1.9);
-      });
-      // impact lines around the fingertip on a click
-      if (hd.pose === "point" && GP.tip && grip > 0.35) {
-        var ia = (grip - 0.35) / 0.65, tx2 = GP.tip[0], ty2 = GP.tip[1] - 6;
-        cx.fillStyle = col.fg === "#ffffff" || col.fg === "#fafafa" ? "#ffffff" : ink;
-        cx.globalAlpha = Math.min(1, alpha * 1.6) * ia;
-        [-1.15, -0.55, 0.55, 1.15].forEach(function (aa, n5) {
-          var r1 = 16 + (1 - ia) * 6, r2 = r1 + 9 + ia * 7, dir = aa - Math.PI / 2;
-          taper(tx2 + Math.cos(dir) * r1, ty2 + Math.sin(dir) * r1, tx2 + Math.cos(dir) * (r1 + r2) / 2 + n5 * 0.3, ty2 + Math.sin(dir) * (r1 + r2) / 2,
-                tx2 + Math.cos(dir) * r2, ty2 + Math.sin(dir) * r2, 3.4);
-        });
-      }
-      cx.restore();
-    }
     (function loop(ts) {
       if (on) {
         if (++fr % 90 === 0) colors();
@@ -1623,14 +1339,6 @@ export function startEngine(): void {
           cx.beginPath(); cx.arc(gx2, gy2, 1.55 + sp * 0.6, 0, 6.283); cx.fill();
         }
         cx.globalAlpha = 1;
-        var hs = shapes[target].hands;
-        if (hs && hs.length) {
-          for (var h = 0; h < hs.length; h++) {
-            // each hand appears like a spell: fade in, pop, and a burst of rays (the second one a beat later)
-            var fade = reduce ? 1 : Math.min(1, Math.max(0, (performance.now() - switchAt - 180 - h * 160) / 700));
-            drawGlove(hs[h], time, fade, h + target * 3);
-          }
-        }
       }
       requestAnimationFrame(loop);
     })(performance.now());

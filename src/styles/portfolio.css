@@ -1008,3 +1008,6 @@ section.line-pre::before { transform: scaleX(0); }
   .work > * > .pipe-head { margin-bottom: auto; }
   .work > * > :last-child { margin-bottom: auto; }
 }
+
+/* ---------- Footer name: solid, white in dark mode and black in light mode ---------- */
+.gl, .gl.hot { color: var(--fg); -webkit-text-stroke: 0; }
