@@ -895,7 +895,7 @@ export function startEngine(): void {
   var raceText = document.getElementById("race-text"), raceIn = document.getElementById("race-input"), raceBox = document.getElementById("race-box");
   var rYou = document.getElementById("r-you"), rTime = document.getElementById("r-time"), raceMsg = document.getElementById("race-msg");
   var runYou = document.getElementById("run-you"), runGhost = document.getElementById("run-ghost"), raceEl = document.querySelector(".race");
-  var GHOST_WPM = 92, ghostCps = GHOST_WPM * 5 / 60, snippet = "", spans = [], raceT0 = 0, raceOn = false, raceDone = false, ghostDoneAt = 0, si = -1;
+  var GHOST_WPM = 46, ghostCps = GHOST_WPM * 5 / 60, snippet = "", spans = [], raceT0 = 0, raceOn = false, raceDone = false, ghostDoneAt = 0, si = -1;
   function norm(t) { return t.replace(/[‘’]/g, "'").replace(/[“”]/g, '"'); }
   function newRace() {
     si = (si + 1 + Math.floor(Math.random() * (SNIPPETS.length - 1))) % SNIPPETS.length;
