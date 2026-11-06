@@ -203,7 +203,7 @@ export function startEngine(): void {
   /* ---------- Copy email ---------- */
   var copyBtn = document.getElementById("copy-btn"), email = document.getElementById("email");
   var ca = document.getElementById("copy-a"), cb = document.getElementById("copy-b");
-  copyBtn.addEventListener("click", function () {
+  if (copyBtn) copyBtn.addEventListener("click", function () {
     function say(t) { ca.textContent = t; cb.textContent = t; setTimeout(function () { ca.textContent = "Copy"; cb.textContent = "Copy"; }, 1800); }
     function fallback() { var r = document.createRange(); r.selectNodeContents(email); var s = getSelection(); s.removeAllRanges(); s.addRange(r); say("Selected"); }
     if (navigator.clipboard) navigator.clipboard.writeText(email.textContent).then(function () { say("Copied ✓"); burst(copyBtn); }, fallback); else fallback();
@@ -449,7 +449,7 @@ export function startEngine(): void {
   window.hello = function () {
     found("console", "Console hacker. Hello to you too.");
     document.getElementById("contact").scrollIntoView({ behavior: reduce ? "auto" : "smooth" });
-    return "Hello! Thanks for digging around.";
+    return "Hello! Thanks for digging around. My links are at the bottom.";
   };
 
   /* Coordinates: click to copy */
@@ -796,7 +796,7 @@ export function startEngine(): void {
   function madeiraTime() {
     try { return new Intl.DateTimeFormat("en-GB", { weekday: "short", hour: "2-digit", minute: "2-digit", timeZone: "Atlantic/Madeira" }).format(new Date()); } catch (e) { return ""; }
   }
-  var files = { "about.txt": "about", "experience.log": "experience", "stack.json": "stack", "contact.md": "contact" };
+  var files = { "about.txt": "about", "experience.log": "experience", "stack.json": "stack", "links.md": "links" };
   var cmds = {
     help: function () { return [
       '<span class="m">available commands</span>',
@@ -804,7 +804,7 @@ export function startEngine(): void {
       '  <span class="b">about</span>       the short story',
       '  <span class="b">experience</span>  where I have worked',
       '  <span class="b">stack</span>       tools I use daily',
-      '  <span class="b">contact</span>     how to reach me',
+      '  <span class="b">links</span>       where to find me online',
       '  <span class="b">ls</span> / <span class="b">cat</span>    browse my files',
       '  <span class="b">time</span>        my local time',
       '  <span class="b">theme</span>       switch light / dark',
@@ -825,8 +825,8 @@ export function startEngine(): void {
       '  <span class="p">"automation"</span>: ["Python", "Cron", "APIs"]',
       '}'
     ]; },
-    contact: function () { return ["email     ghanobrega@gmail.com", "linkedin  /in/ghanobrega", "github    /ghanobregaa"]; },
-    ls: function () { return ['<span class="b">about.txt</span>  <span class="b">experience.log</span>  <span class="b">stack.json</span>  <span class="b">contact.md</span>  <span class="m">.secret</span>']; },
+    links: function () { return ["github     /ghanobregaa", "linkedin   /in/ghanobrega", "instagram  @ghanobrega"]; },
+    ls: function () { return ['<span class="b">about.txt</span>  <span class="b">experience.log</span>  <span class="b">stack.json</span>  <span class="b">links.md</span>  <span class="m">.secret</span>']; },
     time: function () { return [madeiraTime() + ' <span class="m">· my local time</span>']; },
     date: function () { return cmds.time(); },
     theme: function () { themeBtn.click(); return ['<span class="m">theme switched</span>']; },
@@ -897,7 +897,7 @@ export function startEngine(): void {
   cmds.vim = function () { return ['<span class="m">you are now trapped. just kidding:</span> :q!']; };
   cmds["42"] = function () { return ["The answer. But what was the question?"]; };
   cmds.hello = cmds.hi = function () { return ["Hi! Nice of you to say hello."]; };
-  cmds["hello()"] = function () { window.hello(); return ['<span class="p">hello!</span> opening contact...']; };
+  cmds["hello()"] = function () { window.hello(); return ['<span class="p">hello!</span> scrolling to my links...']; };
 
   /* ---------- Easter egg total ---------- */
   document.getElementById("egg-t").textContent = EGG_TOTAL;
