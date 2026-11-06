@@ -17,14 +17,14 @@ export function startEngine(): void {
   var fine = matchMedia("(pointer: fine)").matches;
 
   /* ---------- Theme with circular reveal ---------- */
-  var saved = null; try { saved = localStorage.getItem("theme"); } catch (e) {}
+  var saved = null; try { saved = localStorage.getItem("theme"); } catch (e) { }
   root.setAttribute("data-theme", saved === "light" ? "light" : "dark");
   var themeBtn = document.getElementById("theme-toggle");
   themeBtn.addEventListener("click", function (ev) {
     if (window.__noThemeClick) { window.__noThemeClick = false; return; }
     var current = root.getAttribute("data-theme") || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
     var next = current === "dark" ? "light" : "dark";
-    function apply() { root.setAttribute("data-theme", next); try { localStorage.setItem("theme", next); } catch (e) {} readColors(); }
+    function apply() { root.setAttribute("data-theme", next); try { localStorage.setItem("theme", next); } catch (e) { } readColors(); }
     if (!document.startViewTransition || reduce) { apply(); return; }
     var r = themeBtn.getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + r.height / 2;
     var end = Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y));
@@ -33,7 +33,7 @@ export function startEngine(): void {
       t.ready.then(function () {
         root.animate({ clipPath: ["circle(0px at " + x + "px " + y + "px)", "circle(" + end + "px at " + x + "px " + y + "px)"] },
           { duration: 650, easing: "cubic-bezier(.2,.8,.2,1)", pseudoElement: "::view-transition-new(root)" });
-      }).catch(function () {});
+      }).catch(function () { });
     } catch (e) { apply(); }
   });
 
@@ -85,7 +85,7 @@ export function startEngine(): void {
     try {
       var parts = new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Atlantic/Madeira" }).format(new Date()).split(":");
       clock.innerHTML = parts[0] + '<span class="colon">:</span>' + parts[1];
-    } catch (e) {}
+    } catch (e) { }
   }
   tick(); setInterval(tick, 20000);
 
@@ -140,7 +140,7 @@ export function startEngine(): void {
   /* ---------- Scroll: progress, timeline rail, active nav ---------- */
   var progress = document.getElementById("progress"), timeline = document.getElementById("timeline");
   var links = document.querySelectorAll("[data-link]");
-  var ids = ["about", "experience", "work", "contact"];
+  var ids = ["about", "experience", "craft", "contact"];
   function onScroll() {
     var max = document.documentElement.scrollHeight - innerHeight;
     progress.style.transform = "scaleX(" + (max > 0 ? scrollY / max : 0) + ")";
@@ -201,25 +201,9 @@ export function startEngine(): void {
     var h = +new Intl.DateTimeFormat("en-GB", { hour: "2-digit", hour12: false, timeZone: "Atlantic/Madeira" }).format(new Date());
     document.getElementById("greet").textContent =
       (h < 6 ? "Coding late tonight" : h < 12 ? "Good morning" : h < 19 ? "Good afternoon" : "Good evening");
-  } catch (e) {}
+  } catch (e) { }
   var statusText = document.getElementById("status-text");
   if (!reduce) setInterval(function () { statusText.classList.toggle("swap"); }, 4200);
-
-  /* ---------- Rotating title ---------- */
-  var rot = document.getElementById("rotator");
-  var roles = ["Full-stack developer.", "Flutter developer.", "Automation builder.", "Python tinkerer.", "Integration nerd."];
-  var ri = 0;
-  function setRole(text) {
-    var old = rot.querySelectorAll(".ch");
-    old.forEach(function (c, j) { c.style.setProperty("--j", j); c.classList.add("out"); });
-    setTimeout(function () {
-      rot.textContent = "";
-      var j = 0; splitWords(rot, text, function () { return (j++) - 4; });
-    }, 420 + old.length * 14);
-  }
-  if (!reduce) setTimeout(function () {
-    setInterval(function () { ri = (ri + 1) % roles.length; setRole(roles[ri]); }, 3200);
-  }, 1800);
 
   /* ---------- About: words light up with scroll ---------- */
   var prose = document.getElementById("prose"), words = [];
@@ -284,19 +268,19 @@ export function startEngine(): void {
   }
   /* ---------- Easter egg hunt ---------- */
   var EGGS = {
-    madeira:  ["Volcano",        "Type the name of the island. Anywhere."],
-    konami:   ["Arcade",         "Old gamers know the code: ↑ ↑ ↓ ↓ ← → ← → B A"],
-    gravity:  ["Gravity",        "Type the word Newton is famous for."],
-    matrix:   ["Matrix",         "Type the name of a film about a red pill."],
-    lights:   ["Lights out",     "Hold the theme button for a while."],
-    console:  ["Console",        "Developers open the console. Try it."],
-    coords:   ["Coordinates",    "The coordinates under the globe know where I live. Click them."],
-    roll:     ["Barrel roll",    "Click the logo five times, fast."],
-    dizzy:    ["Dizzy",          "Fling the globe as hard as you can."],
-    idle:     ["Nap time",       "Do nothing for 30 seconds."],
-    sandwich: ["Sandwich",       "Ask the terminal, politely, as a superuser, for food."],
-    speed:    ["Speed demon",    "Beat my ghost in the Type race."],
-    bugs:     ["Exterminator",   "Squash 25 bugs in a single run of Bug hunt."]
+    madeira: ["Volcano", "Type the name of the island. Anywhere."],
+    konami: ["Arcade", "Old gamers know the code: ↑ ↑ ↓ ↓ ← → ← → B A"],
+    gravity: ["Gravity", "Type the word Newton is famous for."],
+    matrix: ["Matrix", "Type the name of a film about a red pill."],
+    lights: ["Lights out", "Hold the theme button for a while."],
+    console: ["Console", "Developers open the console. Try it."],
+    coords: ["Coordinates", "The coordinates under the globe know where I live. Click them."],
+    roll: ["Barrel roll", "Click the logo five times, fast."],
+    dizzy: ["Dizzy", "Fling the globe as hard as you can."],
+    idle: ["Nap time", "Do nothing for 30 seconds."],
+    sandwich: ["Sandwich", "Ask the terminal, politely, as a superuser, for food."],
+    speed: ["Speed demon", "Beat my ghost in the Type race."],
+    bugs: ["Exterminator", "Squash 25 bugs in a single run of Bug hunt."]
   };
   var EGG_TOTAL = Object.keys(EGGS).length, got = {};
   try { got = JSON.parse(localStorage.getItem("gn-eggs") || "{}") || {}; } catch (e) { got = {}; }
@@ -307,7 +291,7 @@ export function startEngine(): void {
     var isNew = !got[id];
     if (isNew) {
       got[id] = 1;
-      try { localStorage.setItem("gn-eggs", JSON.stringify(got)); } catch (e) {}
+      try { localStorage.setItem("gn-eggs", JSON.stringify(got)); } catch (e) { }
       var n = eggCount();
       eggN.textContent = n; eggBtn.classList.remove("bump"); void eggBtn.offsetWidth; eggBtn.classList.add("bump");
       if (n === EGG_TOTAL) { showToast("All " + EGG_TOTAL + " eggs found. You are officially a legend.", 4200); burst(eggBtn); return; }
@@ -426,7 +410,7 @@ export function startEngine(): void {
   try {
     console.log("%cgn_", "font: 600 42px Geist, sans-serif; letter-spacing: -2px;");
     console.log("%cYou opened the console. I like you already.\nType hello() and press Enter.", "font: 13px 'Geist Mono', monospace; color: #888;");
-  } catch (e) {}
+  } catch (e) { }
   window.hello = function () {
     found("console", "Console hacker. Hello to you too.");
     document.getElementById("contact").scrollIntoView({ behavior: reduce ? "auto" : "smooth" });
@@ -593,165 +577,40 @@ export function startEngine(): void {
   });
   ["pointerup", "pointercancel"].forEach(function (ev) { gCan.addEventListener(ev, function () { gDrag = false; }); });
 
-  /* ---------- Automation: a scheduled workflow runs step by step ---------- */
-  var wfNodes = document.querySelectorAll("#wf .wn"), wfLanes = document.querySelectorAll("#wf .wl");
-  var wfLog = document.getElementById("wf-log"), runEl = document.getElementById("run-count"), runs = 1042;
-  var stepLogs = ["schedule fired", "fetched 128 records", "normalised 128 records", "kept 24 that match the rules", "sent 24 notifications"];
-  function stamp() {
-    try { return new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit", timeZone: "Atlantic/Madeira" }).format(new Date()); } catch (e) { return ""; }
-  }
-  function logLine(html) {
-    var d = document.createElement("div"); d.innerHTML = '<span class="m">' + stamp() + '</span> ' + html; wfLog.appendChild(d);
-    while (wfLog.children.length > 4) wfLog.removeChild(wfLog.firstChild);
-  }
-  function wfCycle() {
-    wfNodes.forEach(function (n) { n.classList.remove("run", "ok"); });
-    wfLanes.forEach(function (l) { l.classList.remove("go", "done"); });
-    var t0 = performance.now();
-    (function step(i) {
-      var n = wfNodes[i], dur = 520 + Math.random() * 300;
-      n.style.setProperty("--dur", dur + "ms"); n.classList.add("run");
-      setTimeout(function () {
-        n.classList.remove("run"); n.classList.add("ok"); logLine(stepLogs[i]);
-        if (i < wfNodes.length - 1) {
-          wfLanes[i].classList.add("go", "done");
-          setTimeout(function () { step(i + 1); }, 450);
-        } else {
-          runs++; bump(runEl, runs);
-          logLine('<span class="ok">run #' + runs + ' completed in ' + ((performance.now() - t0) / 1000).toFixed(2) + 's</span>');
-          setTimeout(wfCycle, 2600);
-        }
-      }, dur);
-    })(0);
-  }
-  if (!reduce) {
-    if ("IntersectionObserver" in window) {
-      var wio = new IntersectionObserver(function (e) { if (e[0].isIntersecting) { wfCycle(); wio.disconnect(); } });
-      wio.observe(document.getElementById("wf"));
-    } else wfCycle();
-  } else {
-    wfNodes.forEach(function (n) { n.classList.add("ok"); });
-    wfLanes.forEach(function (l) { l.classList.add("done"); });
-  }
-
-  function bump(el, n) {
-    el.textContent = n.toLocaleString("en-US");
-    el.classList.remove("bump"); void el.offsetWidth; el.classList.add("bump");
-  }
-
-  /* ---------- Mobile app: one Flutter codebase, two phones in sync ---------- */
-  var devs = document.querySelectorAll(".dev-scr"), cmdT = document.getElementById("cmd-t");
-  var APP = '<div class="splash"><span class="logo"></span></div>' +
-    '<div class="mtrack">' +
-      '<div class="sc"><span class="art a1"><i></i><i></i><i></i></span><b>Plan</b><span class="ln"></span><span class="ln short"></span></div>' +
-      '<div class="sc"><span class="art a2"><i></i><i></i><i></i></span><b>Track</b><span class="ln"></span><span class="ln short"></span></div>' +
-      '<div class="sc"><span class="art a3"><i></i><i></i><i></i></span><b>Done</b><span class="ln"></span><span class="ln short"></span></div>' +
-      '<div class="sc home"><div class="h-top" style="--k:0"><b>Hi, Ana</b><span class="av"></span></div><div class="h-card" style="--k:1"></div>' +
-      '<div class="h-row" style="--k:2"></div><div class="h-row" style="--k:3"></div><div class="h-row" style="--k:4"></div></div>' +
-    '</div><div class="dots"><i></i><i></i><i></i></div><div class="cta">Get started</div><span class="finger"></span>';
-  devs.forEach(function (d) { d.insertAdjacentHTML("beforeend", APP); });
-  var mobTimers = [];
-  function mLater(fn, ms) { mobTimers.push(setTimeout(fn, ms)); }
-  function eachDev(fn) { devs.forEach(function (d, i) { setTimeout(function () { fn(d); }, i * 90); }); }
-  function setStep(n) {
-    eachDev(function (d) {
-      d.dataset.step = n;
-      d.querySelector(".mtrack").style.transform = "translateX(" + (-Math.max(0, Math.min(3, n - 1)) * 100) + "%)";
-    });
-  }
-  function finger(cls) { eachDev(function (d) { var f = d.querySelector(".finger"); f.className = "finger"; void f.offsetWidth; f.classList.add(cls); }); }
-  function pressCta() { eachDev(function (d) { var c = d.querySelector(".cta"); c.classList.add("press"); setTimeout(function () { c.classList.remove("press"); }, 200); }); }
-  function typeCmd(text, done) {
-    var i = 0;
-    (function st() { cmdT.textContent = text.slice(0, i); if (i++ < text.length) setTimeout(st, 38); else if (done) done(); })();
-  }
-  function mobCycle() {
-    typeCmd("flutter run -d all", function () {
-      setStep(0);
-      mLater(function () { cmdT.innerHTML = '<span class="ok">✓</span> running on iOS + Android'; }, 600);
-      mLater(function () { setStep(1); }, 1400);
-      mLater(function () { finger("swipe"); }, 2400);
-      mLater(function () { setStep(2); }, 2600);
-      mLater(function () { finger("swipe"); }, 3600);
-      mLater(function () { setStep(3); }, 3800);
-      mLater(function () { finger("tap"); pressCta(); }, 4900);
-      mLater(function () { setStep(4); cmdT.innerHTML = '<span class="ok">✓</span> same code, two apps'; }, 5300);
-      mLater(mobCycle, 8000);
-    });
-  }
-  if (!reduce) {
-    if ("IntersectionObserver" in window) {
-      var mio = new IntersectionObserver(function (e) { if (e[0].isIntersecting) { mobCycle(); mio.disconnect(); } });
-      mio.observe(devs[0]);
-    } else mobCycle();
-  }
-
-  /* ---------- Website: skeleton -> built -> responsive -> click ---------- */
-  var browser = document.getElementById("browser"), urlEl = document.getElementById("b-url"), perfEl = document.getElementById("perf");
-  var bCursor = browser.querySelector(".b-cursor"), bBtn = browser.querySelector(".b-btn");
-  var urls = ["yourbrand.com", "studio-nova.pt", "coffee-lab.co", "my-next-idea.dev"], ui = 0;
-  function typeUrl(text, done) {
-    var i = 0;
-    (function step() { urlEl.textContent = text.slice(0, i); if (i++ < text.length) setTimeout(step, 45); else if (done) done(); })();
-  }
-  function countPerf() {
-    var t0 = performance.now();
-    (function step(now) {
-      var p = Math.min(1, (now - t0) / 1300);
-      perfEl.textContent = Math.round(100 * (1 - Math.pow(1 - p, 3)));
-      if (p < 1) requestAnimationFrame(step); else bump(perfEl, 100);
-    })(t0);
-  }
-  function moveCursorTo(el) {
-    var br = browser.getBoundingClientRect(), r = el.getBoundingClientRect();
-    bCursor.style.transform = "translate(" + (r.left - br.left + r.width * 0.6) + "px," + (r.top - br.top + r.height * 0.55) + "px)";
-  }
-  function siteCycle() {
-    browser.classList.remove("built", "mobile");
-    bCursor.classList.remove("on", "click");
-    bCursor.style.transform = "translate(30px, 200px)";
-    perfEl.textContent = "0";
-    typeUrl(urls[ui++ % urls.length], function () {
-      setTimeout(function () { browser.classList.add("built"); countPerf(); }, 700);
-      setTimeout(function () { bCursor.classList.add("on"); moveCursorTo(bBtn); }, 1900);
-      setTimeout(function () {
-        bCursor.classList.add("click"); bBtn.classList.add("pressed");
-        setTimeout(function () { bBtn.classList.remove("pressed"); }, 180);
-      }, 2900);
-      setTimeout(function () { bCursor.classList.remove("on", "click"); browser.classList.add("mobile"); }, 3700);
-      setTimeout(function () { browser.classList.remove("mobile"); }, 5900);
-      setTimeout(siteCycle, 7400);
-    });
-  }
-  if (!reduce) {
-    var siteStarted = false;
-    if ("IntersectionObserver" in window) {
-      var sio = new IntersectionObserver(function (e) { if (e[0].isIntersecting && !siteStarted) { siteStarted = true; siteCycle(); sio.disconnect(); } });
-      sio.observe(browser);
-    } else siteCycle();
-  }
-
-  /* ---------- Lead flow: payloads typed out ---------- */
-  var flow = document.getElementById("flow");
-  if (reduce && flow.pauseAnimations) flow.pauseAnimations();
-  var payloadEl = document.getElementById("payload"), leadEl = document.getElementById("lead-count"), leads = 3902;
-  var payloads = [
-    '{"event":"order.created","id":1042,"total":49.90}',
-    '{"event":"user.signup","plan":"pro","country":"PT"}',
-    '{"event":"payment.succeeded","amount":19.00}',
-    '{"event":"file.uploaded","name":"report.pdf"}'
-  ];
-  var pi = 0;
-  function typePayload() {
-    var text = payloads[pi++ % payloads.length], i = 0;
-    if (reduce) { payloadEl.textContent = text; return; }
-    (function step() {
-      payloadEl.textContent = text.slice(0, i);
-      if (i++ < text.length) setTimeout(step, 22);
-      else { bump(leadEl, ++leads); setTimeout(typePayload, 1600); }
-    })();
-  }
-  typePayload();
+  /* ---------- Full stack, literally: the app explodes into its layers (3D + parallax) ---------- */
+  (function () {
+    var sec = document.getElementById("craft"), stack = document.getElementById("xs-stack");
+    if (!sec || !stack) return;
+    var layers = stack.querySelectorAll(".xs-layer");
+    var bg = document.getElementById("xs-bgword"), head = document.getElementById("xs-head"), cap = document.getElementById("xs-cap");
+    var tmx = 0, tmy = 0, mx = 0, my = 0, on = false, lastCap = "";
+    addEventListener("pointermove", function (e) { if (!on) return; tmx = e.clientX / innerWidth - 0.5; tmy = e.clientY / innerHeight - 0.5; }, { passive: true });
+    function cl(x) { return Math.max(0, Math.min(1, x)); }
+    function ease(x) { x = cl(x); return x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2; }
+    function frame(ts) {
+      var r = sec.getBoundingClientRect(), span = Math.max(1, sec.offsetHeight - innerHeight);
+      var p = cl(-r.top / span), t = ts / 1000;
+      if (reduce) p = 0.7;
+      mx += (tmx - mx) * 0.07; my += (tmy - my) * 0.07;
+      var e = ease((p - 0.06) / 0.42), spread = ease((p - 0.16) / 0.44), size = stack.offsetWidth / 360;
+      var rx = 58 * e - my * 14, rz = -38 * e + mx * 10, ry = mx * 14 * (1 - e * 0.4), lift = -40 * spread * size;
+      stack.style.transform = "translateY(" + (lift + Math.sin(t * 1.1) * 6 * e).toFixed(1) + "px) rotateX(" + rx.toFixed(2) + "deg) rotateY(" + ry.toFixed(2) + "deg) rotateZ(" + rz.toFixed(2) + "deg)";
+      var gap = 104 * size * spread, n = layers.length;
+      layers.forEach(function (L, i) {
+        var z = (i - (n - 1) / 2) * gap + i * 0.6 + Math.sin(t * 1.4 + i * 0.9) * 5 * spread;
+        L.style.transform = "translateZ(" + z.toFixed(1) + "px)";
+        L.style.setProperty("--tag", cl((p - 0.42 - i * 0.03) / 0.1).toFixed(2));
+      });
+      // parallax: the big outline word drifts slower, the heading faster
+      bg.style.transform = "translate(calc(-50% + " + (mx * -40 + (p - 0.5) * -160).toFixed(1) + "px), calc(-50% + " + (my * -30).toFixed(1) + "px))";
+      if (innerWidth >= 900) head.style.transform = "translateY(calc(-50% + " + ((0.5 - p) * 120 + my * 18).toFixed(1) + "px))";
+      else head.style.transform = "translateY(" + ((0.3 - p) * 60).toFixed(1) + "px)";
+      var c = p < 0.12 ? "// scroll to take it apart" : spread < 0.98 ? "// git checkout --exploded-view" : (innerWidth < 600 ? "// five layers, one app" : "// five layers, one app · move the mouse to orbit");
+      if (c !== lastCap) { lastCap = c; cap.textContent = c; }
+    }
+    if ("IntersectionObserver" in window) new IntersectionObserver(function (en) { on = en[0].isIntersecting; }, { rootMargin: "120px 0px" }).observe(sec); else on = true;
+    (function loop(ts) { if (on) frame(ts || 0); requestAnimationFrame(loop); })(0);
+  })();
 
   /* ---------- Terminal ---------- */
   var tOut = document.getElementById("term-out"), tIn = document.getElementById("term-input"), tBody = document.getElementById("term-body");
@@ -779,33 +638,39 @@ export function startEngine(): void {
   }
   var files = { "about.txt": "about", "experience.log": "experience", "stack.json": "stack", "links.md": "links" };
   var cmds = {
-    help: function () { return [
-      '<span class="m">available commands</span>',
-      '  <span class="b">whoami</span>      who is this guy',
-      '  <span class="b">about</span>       the short story',
-      '  <span class="b">experience</span>  where I have worked',
-      '  <span class="b">stack</span>       tools I use daily',
-      '  <span class="b">links</span>       where to find me online',
-      '  <span class="b">ls</span> / <span class="b">cat</span>    browse my files',
-      '  <span class="b">time</span>        my local time',
-      '  <span class="b">theme</span>       switch light / dark',
-      '  <span class="b">madeira</span>     you will see',
-      '  <span class="b">clear</span>       clean the screen'
-    ]; },
+    help: function () {
+      return [
+        '<span class="m">available commands</span>',
+        '  <span class="b">whoami</span>      who is this guy',
+        '  <span class="b">about</span>       the short story',
+        '  <span class="b">experience</span>  where I have worked',
+        '  <span class="b">stack</span>       tools I use daily',
+        '  <span class="b">links</span>       where to find me online',
+        '  <span class="b">ls</span> / <span class="b">cat</span>    browse my files',
+        '  <span class="b">time</span>        my local time',
+        '  <span class="b">theme</span>       switch light / dark',
+        '  <span class="b">madeira</span>     you will see',
+        '  <span class="b">clear</span>       clean the screen'
+      ];
+    },
     whoami: function () { return ["Guilherme Nóbrega", '<span class="m">full-stack developer · ' + age + ' y/o</span>']; },
     about: function () { return ["I build automations, mobile apps, integrations", "and websites. From idea to production, front to back."]; },
-    experience: function () { return [
-      '<span class="p">2022 → now</span>   Grupo AFA         Flutter, React, Python',
-      '<span class="p">2021 → 2022</span>  Savoy Signature   Flutter apps, React sites, REST APIs'
-    ]; },
-    stack: function () { return [
-      '{',
-      '  <span class="p">"web"</span>: ["React", "Next.js", "TypeScript", "Vite", "shadcn/ui"],',
-      '  <span class="p">"mobile"</span>: ["Flutter", "Firebase"],',
-      '  <span class="p">"backend"</span>: ["Python", "Flask", "NestJS"],',
-      '  <span class="p">"automation"</span>: ["Python", "Cron", "APIs"]',
-      '}'
-    ]; },
+    experience: function () {
+      return [
+        '<span class="p">2022 → now</span>   Grupo AFA         Flutter, React, Python',
+        '<span class="p">2021 → 2022</span>  Savoy Signature   Flutter apps, React sites, REST APIs'
+      ];
+    },
+    stack: function () {
+      return [
+        '{',
+        '  <span class="p">"web"</span>: ["React", "Next.js", "TypeScript", "Vite", "shadcn/ui"],',
+        '  <span class="p">"mobile"</span>: ["Flutter", "Firebase"],',
+        '  <span class="p">"backend"</span>: ["Python", "Flask", "NestJS"],',
+        '  <span class="p">"automation"</span>: ["Python", "Cron", "APIs"]',
+        '}'
+      ];
+    },
     links: function () { return ["github     /ghanobregaa", "linkedin   /in/ghanobrega", "instagram  @ghanobrega"]; },
     ls: function () { return ['<span class="b">about.txt</span>  <span class="b">experience.log</span>  <span class="b">stack.json</span>  <span class="b">links.md</span>  <span class="m">.secret</span>']; },
     time: function () { return [madeiraTime() + ' <span class="m">· my local time</span>']; },
@@ -995,8 +860,10 @@ export function startEngine(): void {
   }
   function readV() {
     var c = getComputedStyle(root);
-    vCol = { fg: c.getPropertyValue("--fg").trim(), muted: c.getPropertyValue("--muted").trim(), line: c.getPropertyValue("--line").trim(),
-             ac: c.getPropertyValue("--accent").trim(), mono: c.getPropertyValue("--mono") };
+    vCol = {
+      fg: c.getPropertyValue("--fg").trim(), muted: c.getPropertyValue("--muted").trim(), line: c.getPropertyValue("--line").trim(),
+      ac: c.getPropertyValue("--accent").trim(), mono: c.getPropertyValue("--mono")
+    };
   }
   readV();
   function niceCeil(v) {
@@ -1125,7 +992,7 @@ export function startEngine(): void {
   (function () {
     var sec = document.getElementById("morph"), cv = document.getElementById("morph-cv"), cx = cv.getContext("2d");
     var mcs = document.querySelectorAll("#mc-stack .mc"), mcI = document.getElementById("mc-i"), mcBar = document.getElementById("mc-bar");
-    var S = 420, N = (window.innerWidth < 600 ? 1100 : 1700), shapes = [], P = [];
+    var S = 420, N = (window.innerWidth < 600 ? 1900 : 3000), shapes = [], P = [];
     var off = document.createElement("canvas"); off.width = S; off.height = S;
     var o = off.getContext("2d", { willReadFrequently: true });
     var TA = new Float32Array(N * 2), TB = new Float32Array(N * 2);
@@ -1143,121 +1010,210 @@ export function startEngine(): void {
     function makeShape(parts) {
       parts = parts.filter(function (p) { return p && p.pts && p.pts.length; });
       var total = parts.reduce(function (a, p) { return a + p.pts.length / 2 * p.w; }, 0);
-      var pi = new Uint16Array(N), bx = new Float32Array(N), by = new Float32Array(N), idx = 0;
+      var pi = new Uint16Array(N), bx = new Float32Array(N), by = new Float32Array(N), ax = new Float32Array(N), ay = new Float32Array(N), idx = 0;
       parts.forEach(function (p, k) {
         var n = k === parts.length - 1 ? N - idx : Math.round(N * (p.pts.length / 2 * p.w) / total);
         for (var j = 0; j < n && idx < N; j++, idx++) {
           var r = Math.floor(Math.random() * (p.pts.length / 2)) * 2;
           pi[idx] = k; bx[idx] = p.pts[r] + (Math.random() - 0.5) * 1.6; by[idx] = p.pts[r + 1] + (Math.random() - 0.5) * 1.6;
+          if (p.alt && p.alt.length) { var r2 = Math.floor(Math.random() * (p.alt.length / 2)) * 2; ax[idx] = p.alt[r2]; ay[idx] = p.alt[r2 + 1]; }
         }
       });
       for (var i = N - 1; i > 0; i--) {
-        var j2 = Math.floor(Math.random() * (i + 1)), t1 = pi[i], t2 = bx[i], t3 = by[i];
-        pi[i] = pi[j2]; bx[i] = bx[j2]; by[i] = by[j2]; pi[j2] = t1; bx[j2] = t2; by[j2] = t3;
+        var j2 = Math.floor(Math.random() * (i + 1)), t1 = pi[i], t2 = bx[i], t3 = by[i], t4 = ax[i], t5 = ay[i];
+        pi[i] = pi[j2]; bx[i] = bx[j2]; by[i] = by[j2]; ax[i] = ax[j2]; ay[i] = ay[j2];
+        pi[j2] = t1; bx[j2] = t2; by[j2] = t3; ax[j2] = t4; ay[j2] = t5;
       }
       var out = [0, 0];
-      return { evalAll: function (t, buf) {
-        for (var i = 0; i < N; i++) {
-          var p = parts[pi[i]];
-          if (p.fn) p.fn(t, bx[i], by[i], out, i); else { out[0] = bx[i]; out[1] = by[i]; }
-          buf[2 * i] = out[0] / S - 0.5; buf[2 * i + 1] = out[1] / S - 0.5;
+      return {
+        evalAll: function (t, buf) {
+          for (var i = 0; i < N; i++) {
+            var p = parts[pi[i]];
+            if (p.fn) p.fn(t, bx[i], by[i], out, i, ax[i], ay[i]); else { out[0] = bx[i]; out[1] = by[i]; }
+            buf[2 * i] = out[0] / S - 0.5; buf[2 * i + 1] = out[1] / S - 0.5;
+          }
         }
-      } };
+      };
     }
     function bob(t) { return Math.sin(t * 2.2) * 5; }
-    // ---------- Automation: two meshing gears that never stop ----------
-    function gearPath(cx0, cy0, rOut, rIn, teeth) {
-      o.beginPath();
-      for (var k = 0; k < teeth * 4; k++) {
-        var a = k / (teeth * 4) * Math.PI * 2, r = (k % 4 === 1 || k % 4 === 2) ? rOut : rIn;
-        var px = cx0 + Math.cos(a) * r, py = cy0 + Math.sin(a) * r;
-        if (k) o.lineTo(px, py); else o.moveTo(px, py);
-      }
-      o.closePath();
-    }
+    function clamp01(x) { return Math.max(0, Math.min(1, x)); }
+    function ease3(x) { x = clamp01(x); return x * x * (3 - 2 * x); }
+    function popBack(x) { x = clamp01(x); var c1 = 1.9; return 1 + (c1 + 1) * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2); }
+    // a part whose particles also know a second drawing (used for the phone's back side)
+    function part2(drawA, drawB, fn, weight) { var A = part(drawA, fn, weight); clear(); drawB(); A.alt = grab(); return A; }
+
+    // ---------- Automation: code that writes itself, runs, and clears ----------
     function automation() {
-      var B = [168, 248], Sm = [294, 142], wB = 0.32, ratio = 12 / 8;
-      return makeShape([
-        part(function () {
-          gearPath(B[0], B[1], 108, 90, 12); o.fill();
-          o.globalCompositeOperation = "destination-out"; dot(B[0], B[1], 54); o.globalCompositeOperation = "source-over";
-          o.lineWidth = 12; for (var k = 0; k < 4; k++) { var a = k * Math.PI / 2 + Math.PI / 4; line(B[0], B[1], B[0] + Math.cos(a) * 58, B[1] + Math.sin(a) * 58, 10); }
-          dot(B[0], B[1], 18);
-        }, function (t, x, y, out) { rot(x, y, B[0], B[1], t * wB, out); }, 1.25),
-        part(function () {
-          gearPath(Sm[0], Sm[1], 74, 58, 8); o.fill();
-          o.globalCompositeOperation = "destination-out"; dot(Sm[0], Sm[1], 30); o.globalCompositeOperation = "source-over";
-          dot(Sm[0], Sm[1], 11);
-        }, function (t, x, y, out) { rot(x, y, Sm[0], Sm[1], -t * wB * ratio + Math.PI / 8, out); })
-      ]);
-    }
-
-    // ---------- Mobile Apps: a home screen whose icons ripple like a wave ----------
-    function phone() {
-      var cols = [154, 196, 238], rows = [92, 140, 188, 236], S = 30;
-      function tilt(t) { return Math.sin(t * 0.9) * 0.06; }
-      return makeShape([
-        part(function () { o.lineWidth = 14; rr(124, 24, 172, 372, 32); o.stroke(); rr(184, 42, 52, 13, 6.5); o.fill(); line(184, 376, 236, 376, 6); },
-             function (t, x, y, out) { rot(x, y, 210, 210, tilt(t), out); }, 1.1),
-        part(function () { rows.forEach(function (ry) { cols.forEach(function (cxx) { rr(cxx - 2, ry, S, S, 9); o.fill(); }); }); },
-             function (t, x, y, out) {
-               var c = Math.round((x - 167) / 42), r = Math.round((y - 107) / 48);
-               c = Math.max(0, Math.min(2, c)); r = Math.max(0, Math.min(3, r));
-               var icx = cols[c] - 2 + S / 2, icy = rows[r] + S / 2;
-               var w = Math.max(0, Math.sin(t * 3.2 - (c + r) * 0.75)), s = 1 + 0.32 * w * w, lift = -10 * w * w;
-               rot(icx + (x - icx) * s, icy + (y - icy) * s + lift, 210, 210, tilt(t), out);
-             }, 1.6),
-        part(function () { rr(146, 300, 128, 46, 16); o.lineWidth = 6; o.stroke(); [174, 210, 246].forEach(function (dx) { dot(dx, 323, 9); }); },
-             function (t, x, y, out) { rot(x, y, 210, 210, tilt(t), out); }, 0.8)
-      ]);
-    }
-
-    // ---------- Integrations: a plug and a socket that keep connecting ----------
-    function api() {
-      var C = 4.2;
-      function phase(t) { return (t % C) / C; }
-      function gap(t) {
-        var f = phase(t);
-        if (f < 0.32) { var e = f / 0.32; return 1 - e * e * (3 - 2 * e); }
-        if (f < 0.66) return 0;
-        var e2 = (f - 0.66) / 0.34; return e2 * e2 * (3 - 2 * e2);
+      var C = 7, LINES = [[0, 150], [1, 196], [2, 128], [2, 214], [1, 96], [1, 170], [0, 66]];
+      function yOf(i) { return 96 + i * 36; }
+      function xOf(i) { return 72 + LINES[i][0] * 34; }
+      function typed(t, i) {
+        var tt = t % C;
+        if (tt < 5.3) return ease3((tt - 0.2 - i * 0.44) / 0.4);
+        return 1 - ease3((tt - 5.3 - (LINES.length - 1 - i) * 0.1) / 0.22);
       }
-      return makeShape([
-        part(function () { line(6, 210, 70, 210, 12); rr(64, 168, 104, 84, 18); o.fill(); line(168, 192, 214, 192, 11); line(168, 228, 214, 228, 11); },
-             function (t, x, y, out) { out[0] = x - gap(t) * 46; out[1] = y + Math.sin(t * 2) * 2; }, 1.2),
-        part(function () {
-          rr(250, 168, 104, 84, 18); o.fill(); line(350, 210, 414, 210, 12);
-          o.globalCompositeOperation = "destination-out"; rr(250, 186, 22, 12, 4); o.fill(); rr(250, 222, 22, 12, 4); o.fill(); o.globalCompositeOperation = "source-over";
-        }, function (t, x, y, out) { out[0] = x + gap(t) * 46; out[1] = y + Math.sin(t * 2 + 1) * 2; }, 1.2),
-        part(function () { dot(232, 210, 10); }, function (t, x, y, out, i) {
-          var f = phase(t), life = (f - 0.3) / 0.16;
-          if (life < 0 || life > 1) { out[0] = 232 + ((i % 9) - 4); out[1] = 210 + ((i % 5) - 2) * 4; return; }
-          var a = (i * 2.399) % (Math.PI * 2), sp = 40 + (i % 11) * 9;
-          out[0] = 232 + Math.cos(a) * sp * life; out[1] = 210 + Math.sin(a) * sp * life * 0.8;
-        }, 2.6)
-      ]);
-    }
-
-    // ---------- Websites: a page that assembles itself, block by block ----------
-    function browserShape() {
-      var C = 6.4, blocks = [[56, 128, 308, 18], [56, 160, 196, 72], [264, 160, 100, 72], [56, 246, 92, 92], [160, 246, 92, 92], [264, 246, 100, 92]];
-      function back(x) { var c1 = 1.9; return 1 + (c1 + 1) * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2); }
-      function scaleOf(t, k) {
-        var tt = t % C, inAt = 0.35 + k * 0.42, outAt = 4.9 + (5 - k) * 0.12;
-        if (tt < inAt) return 0;
-        if (tt < inAt + 0.5) return back((tt - inAt) / 0.5);
-        if (tt < outAt) return 1;
-        if (tt < outAt + 0.28) { var e = 1 - (tt - outAt) / 0.28; return e * e; }
-        return 0;
-      }
-      var parts2 = [part(function () { o.lineWidth = 12; rr(32, 64, 356, 296, 22); o.stroke(); line(38, 108, 382, 108, 8); [60, 84, 108].forEach(function (x) { dot(x, 87, 7); }); }, null, 1.2)];
-      blocks.forEach(function (b, k) {
-        parts2.push(part(function () { rr(b[0], b[1], b[2], b[3], b[3] < 30 ? 6 : 12); o.fill(); }, function (t, x, y, out) {
-          var s = scaleOf(t, k), cx1 = b[0] + b[2] / 2, cy1 = b[1] + b[3] / 2;
-          out[0] = cx1 + (x - cx1) * s; out[1] = cy1 + (y - cy1) * s;
-        }, 0.9));
+      var P2 = [part(function () { LINES.forEach(function (l, i) { dot(40, yOf(i), 4.5); }); }, null, 0.45)];
+      LINES.forEach(function (l, i) {
+        P2.push(part(function () { rr(xOf(i), yOf(i) - 8, l[1], 16, 8); o.fill(); }, function (t, x, y, out) {
+          var r = typed(t, i), x0 = xOf(i); out[0] = x0 + (x - x0) * r; out[1] = y;
+        }, 1));
       });
-      return makeShape(parts2);
+      // blinking caret at the end of the line being typed
+      P2.push(part(function () { rr(205, 198, 10, 24, 3); o.fill(); }, function (t, x, y, out) {
+        var tt = t % C, cur = 0;
+        for (var i = 0; i < LINES.length; i++) if (typed(t, i) > 0) cur = i;
+        var r = typed(t, cur), blink = (tt > 3.4 && tt < 5.3) ? (Math.floor(tt * 2.5) % 2 ? 0.15 : 1) : 1;
+        out[0] = xOf(cur) + LINES[cur][1] * r + 10 + (x - 210); out[1] = yOf(cur) + (y - 210) * blink;
+      }, 0.35));
+      // a big check stamp when the script finishes
+      P2.push(part(function () { o.lineWidth = 9; o.beginPath(); o.arc(330, 300, 42, 0, Math.PI * 2); o.stroke(); o.lineWidth = 11; o.beginPath(); o.moveTo(310, 301); o.lineTo(325, 316); o.lineTo(352, 286); o.stroke(); },
+        function (t, x, y, out) {
+          var tt = t % C, s = tt < 3.5 ? 0 : tt < 5.1 ? popBack((tt - 3.5) / 0.45) : 1 - ease3((tt - 5.1) / 0.25);
+          out[0] = 330 + (x - 330) * s; out[1] = 300 + (y - 300) * s;
+        }, 0.9));
+      return makeShape(P2);
+    }
+
+    // ---------- Mobile Apps: icons land on a home screen, one is tapped, the app opens out of it ----------
+    function phone() {
+      var C = 6.8, TAP = 4, U0 = 160, US = 100;
+      var G = [];
+      for (var r = 0; r < 4; r++) for (var c = 0; c < 3; c++) G.push([140 + c * 52, 82 + r * 58, 36, 36]);
+      // header, hero, three list rows (avatar + text), a button and a tab bar
+      var UI = [[140, 72, 140, 14], [140, 98, 140, 70], [140, 182, 26, 26], [174, 186, 106, 18], [140, 220, 26, 26], [174, 224, 106, 18],
+      [140, 258, 26, 26], [174, 262, 106, 18], [140, 298, 140, 22], [146, 336, 28, 18], [196, 336, 28, 18], [246, 336, 28, 18]];
+      function scaleR(R, s) { var cx0 = R[0] + R[2] / 2, cy0 = R[1] + R[3] / 2; return [cx0 - R[2] * s / 2, cy0 - R[3] * s / 2, R[2] * s, R[3] * s]; }
+      function lerpR(a, b, e) { return [a[0] + (b[0] - a[0]) * e, a[1] + (b[1] - a[1]) * e, a[2] + (b[2] - a[2]) * e, a[3] + (b[3] - a[3]) * e]; }
+      function inApp(tt, k) {
+        var u = UI[k], R = u.slice();
+        if (k === 3 || k === 5 || k === 7) R[2] = u[2] * (0.28 + 0.72 * ease3((tt - 3.1 - (k - 3) * 0.2) / 0.45)); // skeleton rows load in
+        if (k >= 9) R = scaleR(R, 1 + 0.35 * Math.sin(Math.PI * clamp01((tt - 4.1 - (k - 9) * 0.38) / 0.3))); // tabs get tapped in turn
+        return R;
+      }
+      function rectAt(t, k) {
+        var tt = t % C, g = G[k], T = G[TAP];
+        if (tt < 2.1) {
+          var s = popBack((tt - 0.1 - k * 0.09) / 0.4);
+          if (k === TAP && tt > 1.75) s *= 1 - 0.2 * Math.sin(Math.PI * clamp01((tt - 1.75) / 0.3));
+          return scaleR(g, s);
+        }
+        if (tt < 2.45) return lerpR(g, T, ease3((tt - 2.1) / 0.3));
+        if (tt < 5.4) { var d = (UI[k][1] - 72) / 280 * 0.35; return lerpR(T, inApp(tt, k), ease3((tt - 2.45 - d) / 0.45)); }
+        if (tt < 6.1) { var d2 = (1 - (UI[k][1] - 72) / 280) * 0.25; return lerpR(inApp(tt, k), T, ease3((tt - 5.4 - d2) / 0.42)); }
+        return scaleR(T, 1 - ease3((tt - 6.1) / 0.35));
+      }
+      var P2 = [part(function () { o.lineWidth = 14; rr(124, 26, 172, 368, 32); o.stroke(); rr(184, 40, 52, 12, 6); o.fill(); line(184, 376, 236, 376, 5); }, null, 0.9)];
+      G.forEach(function (g, k) {
+        P2.push(part(function () { rr(U0, U0, US, US, 24); o.fill(); }, function (t, x, y, out) {
+          var R = rectAt(t, k); out[0] = R[0] + (x - U0) / US * R[2]; out[1] = R[1] + (y - U0) / US * R[3];
+        }, k === 1 ? 2.2 : (k === 3 || k === 5 || k === 7) ? 1.25 : k === 8 ? 1 : k === 0 ? 0.75 : 0.6));
+      });
+      // the tap ripple
+      P2.push(part(function () { o.lineWidth = 5; o.beginPath(); o.arc(210, 210, 40, 0, Math.PI * 2); o.stroke(); }, function (t, x, y, out) {
+        var tt = t % C, T = G[TAP], cx0 = T[0] + T[2] / 2, cy0 = T[1] + T[3] / 2;
+        if (tt > 1.8 && tt < 2.3) { var e = ease3((tt - 1.8) / 0.5), s = 0.55 + 0.8 * e; out[0] = cx0 + (x - 210) * s; out[1] = cy0 + (y - 210) * s; return; }
+        var R = rectAt(t, TAP); out[0] = R[0] + R[2] / 2 + (x - 210) * 0.12; out[1] = R[1] + R[3] / 2 + (y - 210) * 0.12;
+      }, 0.5));
+      return makeShape(P2);
+    }
+
+    // ---------- Integrations: three sources stream into a sync hub that fans out to two outputs ----------
+    function api() {
+      var HX = 210, HY = 210, U0 = 160, US = 100;
+      var SRC = [120, 210, 300], OUT = [150, 270];
+      var E = [
+        [[100, 120], [140, 120], [140, 210], [176, 210]],
+        [[100, 210], [130, 210], [150, 210], [176, 210]],
+        [[100, 300], [140, 300], [140, 210], [176, 210]],
+        [[244, 210], [282, 210], [282, 150], [320, 150]],
+        [[244, 210], [282, 210], [282, 270], [320, 270]]
+      ];
+      function bez(e, u, out) {
+        var a = 1 - u, p = E[e];
+        out[0] = a * a * a * p[0][0] + 3 * a * a * u * p[1][0] + 3 * a * u * u * p[2][0] + u * u * u * p[3][0];
+        out[1] = a * a * a * p[0][1] + 3 * a * a * u * p[1][1] + 3 * a * u * u * p[2][1] + u * u * u * p[3][1];
+      }
+      // [edge, duration, offset] like the little flow chart in the Work section
+      var PK = [[0, 2.4, 0], [1, 2.4, 0.8], [2, 2.4, 1.6], [1, 2.4, 1.2], [3, 1.8, 0.3], [3, 1.8, 1.2], [4, 3.6, 0.9]];
+      var P2 = [];
+      // nodes: sources on the left, outputs on the right, each with a "label"
+      P2.push(part(function () {
+        o.lineWidth = 6;
+        SRC.forEach(function (y) { rr(10, y - 20, 90, 40, 11); o.stroke(); rr(30, y - 4, 50, 8, 4); o.fill(); });
+        OUT.forEach(function (y) { rr(320, y - 20, 90, 40, 11); o.stroke(); });
+        // email envelope
+        o.lineWidth = 4; rr(348, 258, 34, 24, 4); o.stroke(); o.beginPath(); o.moveTo(350, 261); o.lineTo(365, 272); o.lineTo(380, 261); o.stroke();
+      }, null, 1.25));
+      // the dashboard's bars bounce as data lands
+      [0, 1, 2].forEach(function (k) {
+        P2.push(part(function () { rr(U0, U0, US, US, 20); o.fill(); }, function (t, x, y, out) {
+          var h = 8 + 16 * (0.5 + 0.5 * Math.sin(t * 2.6 + k * 1.9)), bx0 = 340 + k * 18, by0 = 162 - h;
+          out[0] = bx0 + (x - U0) / US * 12; out[1] = by0 + (y - U0) / US * h;
+        }, 0.45));
+      });
+      // hub ring and the sync arrows spinning inside it
+      P2.push(part(function () { o.lineWidth = 8; o.beginPath(); o.arc(HX, HY, 34, 0, Math.PI * 2); o.stroke(); }, null, 1.3));
+      P2.push(part(function () {
+        o.lineWidth = 6;
+        [0, Math.PI].forEach(function (a0) {
+          o.beginPath(); o.arc(HX, HY, 17, a0 + 0.3, a0 + 2.5); o.stroke();
+          var ex = HX + Math.cos(a0 + 2.5) * 17, ey = HY + Math.sin(a0 + 2.5) * 17;
+          dot(ex, ey, 5.5);
+        });
+      }, function (t, x, y, out) { rot(x, y, HX, HY, t * 2.4, out); }, 2));
+      // sonar pulse leaving the hub
+      P2.push(part(function () { o.lineWidth = 4; o.beginPath(); o.arc(HX, HY, 34, 0, Math.PI * 2); o.stroke(); }, function (t, x, y, out) {
+        var s = 1 + 0.75 * ((t * 0.8) % 1); out[0] = HX + (x - HX) * s; out[1] = HY + (y - HY) * s;
+      }, 1.3));
+      // dashed edges that march towards the hub and out of it
+      P2.push(part(function () { dot(HX, HY, 6); }, function (t, x, y, out, i) {
+        var e = i % 5, K = 8, sl = Math.floor(i / 5) % K, u = ((sl + t * 1.6) / K) % 1;
+        bez(e, u, out); out[0] += (x - HX) * 0.15; out[1] += (y - HY) * 0.15;
+      }, 22));
+      // packets riding the edges
+      P2.push(part(function () { dot(HX, HY, 6.5); }, function (t, x, y, out, i) {
+        var p = PK[i % PK.length], u = ((t + p[2]) / p[1]) % 1;
+        bez(p[0], u, out); out[0] += x - HX; out[1] += y - HY;
+      }, 22));
+      return makeShape(P2);
+    }
+
+    // ---------- Websites: one window, three breakpoints, the layout reflows ----------
+    function browserShape() {
+      // frame [x, y, w, h] and blocks [header, hero, card1, card2, card3] for desktop, tablet, mobile
+      var L = [
+        { f: [30, 80, 360, 260], b: [[46, 128, 328, 16], [46, 156, 328, 74], [46, 242, 101, 82], [159, 242, 102, 82], [273, 242, 101, 82]] },
+        { f: [75, 62, 270, 296], b: [[91, 110, 238, 16], [91, 138, 238, 74], [91, 224, 113, 62], [216, 224, 113, 62], [91, 298, 238, 44]] },
+        { f: [125, 44, 170, 332], b: [[141, 92, 138, 14], [141, 118, 138, 64], [141, 194, 138, 50], [141, 254, 138, 50], [141, 314, 138, 46]] }
+      ];
+      var HOLD = 1.8, MOVE = 0.75, C = 3 * (HOLD + MOVE);
+      function lerpR(a, b, e) { return [a[0] + (b[0] - a[0]) * e, a[1] + (b[1] - a[1]) * e, a[2] + (b[2] - a[2]) * e, a[3] + (b[3] - a[3]) * e]; }
+      function layout(t) {
+        var tt = t % C, k = Math.floor(tt / (HOLD + MOVE)), f = tt - k * (HOLD + MOVE), e = f < HOLD ? 0 : ease3((f - HOLD) / MOVE);
+        var A = L[k], B = L[(k + 1) % 3];
+        return { f: lerpR(A.f, B.f, e), b: A.b.map(function (r, n) { return lerpR(r, B.b[n], e); }) };
+      }
+      var U0 = 160, US = 100;
+      function edge(side) {
+        return part(function () { if (side === 0 || side === 1) line(U0, U0, U0 + US, U0, 7); else line(U0, U0, U0, U0 + US, 7); }, function (t, x, y, out) {
+          var F = layout(t).f, u = (x - U0) / US, v = (y - U0) / US;
+          if (side === 0) { out[0] = F[0] + u * F[2]; out[1] = F[1] + (y - U0); }
+          else if (side === 1) { out[0] = F[0] + u * F[2]; out[1] = F[1] + F[3] + (y - U0); }
+          else if (side === 2) { out[0] = F[0] + (x - U0); out[1] = F[1] + v * F[3]; }
+          else { out[0] = F[0] + F[2] + (x - U0); out[1] = F[1] + v * F[3]; }
+        }, side < 2 ? 1.5 : 1.25);
+      }
+      var parts4 = [edge(0), edge(1), edge(2), edge(3)];
+      parts4.push(part(function () { line(U0, U0, U0 + US, U0, 5); }, function (t, x, y, out) { var F = layout(t).f; out[0] = F[0] + (x - U0) / US * F[2]; out[1] = F[1] + 34 + (y - U0); }, 0.9));
+      [0, 1, 2].forEach(function (d) {
+        parts4.push(part(function () { dot(U0, U0, 6); }, function (t, x, y, out) { var F = layout(t).f; out[0] = F[0] + 18 + d * 17 + (x - U0); out[1] = F[1] + 17 + (y - U0); }, 0.3));
+      });
+      [0, 1, 2, 3, 4].forEach(function (n) {
+        parts4.push(part(function () { rr(U0, U0, US, US, 10); o.fill(); }, function (t, x, y, out) {
+          var R = layout(t).b[n]; out[0] = R[0] + (x - U0) / US * R[2]; out[1] = R[1] + (y - U0) / US * R[3];
+        }, n === 0 ? 0.3 : n === 1 ? 0.75 : 0.5));
+      });
+      return makeShape(parts4);
     }
     function wordmark() {
       return makeShape([part(function () {
@@ -1334,9 +1290,9 @@ export function startEngine(): void {
             p.vx += (tx - p.x) * 0.13; p.vy += (ty - p.y) * 0.13;
             p.vx *= 0.72; p.vy *= 0.72; p.x += p.vx; p.y += p.vy;
           }
-          var gx2 = Math.round(p.x / 5) * 5, gy2 = Math.round(p.y / 5) * 5, sp = Math.min(1, Math.hypot(p.vx, p.vy) / 6);
+          var gx2 = Math.round(p.x / 3) * 3, gy2 = Math.round(p.y / 3) * 3, sp = Math.min(1, Math.hypot(p.vx, p.vy) / 6);
           cx.globalAlpha = 0.8 + 0.2 * (1 - sp);
-          cx.beginPath(); cx.arc(gx2, gy2, 1.55 + sp * 0.6, 0, 6.283); cx.fill();
+          cx.beginPath(); cx.arc(gx2, gy2, 1.05 + sp * 0.45, 0, 6.283); cx.fill();
         }
         cx.globalAlpha = 1;
       }
@@ -1460,7 +1416,7 @@ export function startEngine(): void {
     var startBtn = document.getElementById("game-start"), scoreEl = document.getElementById("g-score"), comboEl = document.getElementById("g-combo");
     var bestEl = document.getElementById("g-best"), lifeEls = document.querySelectorAll("#g-lives i");
     var W = 0, H = 0, dpr = 1, PROD = 52, GUTTER = 34, LH = 22, TOP = 16;
-    var best = 0; try { best = +localStorage.getItem("gn-bugs-best") || 0; } catch (e) {}
+    var best = 0; try { best = +localStorage.getItem("gn-bugs-best") || 0; } catch (e) { }
     bestEl.textContent = best;
     var BUG = ["..x.x..", "...x...", ".xxxxx.", "xxxxxxx", ".xxxxx.", "xxxxxxx", ".x...x."];
     var BUG2 = ["..x.x..", "...x...", ".xxxxx.", "xxxxxxx", ".xxxxx.", "xxxxxxx", "x.....x"];
@@ -1492,7 +1448,7 @@ export function startEngine(): void {
     }
     function gameOver() {
       running = false;
-      if (score > best) { best = score; try { localStorage.setItem("gn-bugs-best", best); } catch (e) {} pop(bestEl, best); }
+      if (score > best) { best = score; try { localStorage.setItem("gn-bugs-best", best); } catch (e) { } pop(bestEl, best); }
       goTitle.textContent = score >= 25 ? "Prod went down, but what a run." : "Prod is down.";
       goTitle.dataset.text = goTitle.textContent;
       setTimeout(function () { glitch(goTitle); }, 80); setTimeout(function () { glitch(goTitle); }, 900);

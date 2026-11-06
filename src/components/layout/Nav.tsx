@@ -6,7 +6,7 @@ export function Nav() {
         <div className="nav-links">
           <a href="#about" data-link="about">About</a>
           <a href="#experience" data-link="experience">Experience</a>
-          <a href="#work" data-link="work">Work</a>
+          <a href="#craft" data-link="craft">Craft</a>
           <a href="#contact" data-link="contact">Elsewhere</a>
           <button className="theme-btn" id="theme-toggle" type="button" aria-label="Toggle theme">
             <svg className="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" /></svg>
