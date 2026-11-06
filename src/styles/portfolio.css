@@ -52,7 +52,7 @@ a:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outlin
 
 .container {
   width: 100%;
-  max-width: 1200px;
+  max-width: 1040px;
   margin-inline: auto;
   padding-left: max(16px, env(safe-area-inset-left, 0px));
   padding-right: max(16px, env(safe-area-inset-right, 0px));
@@ -726,7 +726,7 @@ h1 .ch.out { animation: fall .45s var(--ease) both; animation-delay: calc(var(--
 .viz-meta b { color: var(--fg); font-weight: 500; font-variant-numeric: tabular-nums; }
 .viz-meta .live { display: inline-flex; align-items: center; gap: 6px; }
 .viz-chart { position: relative; height: 200px; }
-#v-main { width: 100%; height: 100%; display: block; cursor: crosshair; touch-action: pan-y; }
+#v-main { width: 100%; height: 100%; display: block; cursor: default; touch-action: pan-y; }
 .v-tip {
   position: absolute; top: 4px; transform: translateX(-50%); font-family: var(--mono); font-size: 10.5px;
   padding: 4px 8px; border-radius: 6px; background: var(--fg); color: var(--bg); pointer-events: none; white-space: nowrap;
@@ -742,7 +742,7 @@ h1 .ch.out { animation: fall .45s var(--ease) both; animation-delay: calc(var(--
 section.morph { padding-block: 0; height: 340vh; }
 section.morph::before { z-index: 3; }
 .morph-sticky { position: sticky; top: 0; height: 100vh; height: 100svh; overflow: hidden; background: var(--bg); color: var(--fg); }
-#morph-cv { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: pan-y; cursor: crosshair; }
+#morph-cv { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: pan-y; cursor: default; }
 .morph-hint {
   position: absolute; top: calc(68px + env(safe-area-inset-top, 0px)); left: 0; right: 0; display: flex; justify-content: space-between;
   padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
@@ -810,7 +810,7 @@ footer#footer .curtain { transform-origin: 50% 100%; will-change: transform, opa
 .game-stage { position: relative; height: 320px; touch-action: manipulation; user-select: none; -webkit-user-select: none; }
 .game-stage.shake { animation: gShake .35s linear; }
 @keyframes gShake { 20% { transform: translateX(-6px); } 40% { transform: translateX(5px); } 60% { transform: translateX(-3px); } 80% { transform: translateX(2px); } }
-#game-cv { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: crosshair; }
+#game-cv { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: default; }
 .game-overlay {
   position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
   text-align: center; padding: 24px; background: var(--card); background: color-mix(in srgb, var(--card) 82%, transparent);
@@ -920,27 +920,19 @@ section { padding-block: 64px; }
 
 /* ---------- Desktop layout ---------- */
 @media (min-width: 960px) {
-  main section:not(.morph) > .container {
-    display: grid; grid-template-columns: 200px minmax(0, 1fr); column-gap: 56px; align-items: start;
-  }
-  main section:not(.morph) > .container > * { grid-column: 2; min-width: 0; }
-  main section:not(.morph) > .container > .label {
-    grid-column: 1; grid-row: 1 / span 30; position: sticky; top: calc(88px + env(safe-area-inset-top, 0px)); margin: 6px 0 0;
-  }
+  main section:not(.morph) > .container > .label { margin-bottom: 28px; }
   section { padding-block: 96px; }
   .hero { padding-block: clamp(140px, 24vh, 230px) clamp(110px, 18vh, 170px); }
   .hero h1 { font-size: clamp(4rem, 6.4vw, 6.25rem); letter-spacing: -0.05em; }
   .hero .lead { font-size: 18px; }
   .avatar { width: 92px; height: 92px; }
   .about-grid.about-grid { grid-template-columns: minmax(0, 1fr) 300px; gap: 56px; }
-  main section:not(.morph) > .container > .view-tabs { justify-self: start; }
   .globe { width: 260px; height: 260px; }
   .prose p { font-size: 16.5px; line-height: 1.7; }
   .work { gap: 14px; }
   .mc h3 { font-size: clamp(2.6rem, 4.4vw, 3.6rem); }
   .mc-stack { height: 104px; }
   .contact .big { font-size: clamp(2.4rem, 4vw, 3.4rem); }
-  .giant { font-size: clamp(10rem, 22vw, 20rem); }
 }
 @media (min-width: 1280px) {
   .work { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -964,17 +956,6 @@ section { padding-block: 64px; }
 .gitlog .g-hash { color: var(--muted); }
 .gitlog .g-ref { color: var(--accent-ink); }
 .gitlog .g-date { color: var(--muted); }
-
-/* Custom cursor (fine pointers only) */
-.cursor, .cursor-ring { position: fixed; left: 0; top: 0; pointer-events: none; z-index: 50; border-radius: 50%; display: none; }
-/* White + difference blending always inverts what is underneath, in either theme */
-.cursor { width: 6px; height: 6px; margin: -3px 0 0 -3px; background: #fff; mix-blend-mode: difference; }
-.cursor-ring {
-  width: 34px; height: 34px; margin: -17px 0 0 -17px; border: 1px solid #fff; mix-blend-mode: difference;
-  transition: width .35s var(--ease), height .35s var(--ease), margin .35s var(--ease), background .3s, opacity .3s;
-}
-.has-cursor .cursor, .has-cursor .cursor-ring { display: block; }
-.has-cursor .cursor-ring.hover { width: 64px; height: 64px; margin: -32px 0 0 -32px; background: #fff; }
 
 /* Section dividers draw themselves */
 section { position: relative; border-top: 0 !important; }
@@ -1006,11 +987,24 @@ section.line-pre::before { transform: scaleX(0); }
 
 /* Copy burst particles */
 .spark { position: fixed; left: 0; top: 0; width: 5px; height: 5px; background: var(--fg); pointer-events: none; z-index: 70; }
-.has-cursor .cursor-ring.down { width: 26px; height: 26px; margin: -13px 0 0 -13px; }
 
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   *, *::before, *::after { animation: none !important; transition: none !important; }
   .hl::after { transform: scaleX(1); }
   .pre { opacity: 1; transform: none; filter: none; }
+}
+
+/* ---------- Footer name: one line that always fits the screen ---------- */
+.giant { font-size: clamp(2rem, 8.4vw, 10.5rem); letter-spacing: -0.045em; white-space: nowrap; padding-block: 56px 10px; }
+.gl { white-space: pre; }
+
+/* ---------- What I build: 2 x 2 grid on desktop ---------- */
+@media (min-width: 960px) {
+  .work { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; }
+  .work > .pipe, .work > .tile.wide { grid-column: auto; }
+  .work > .pipe, .work > .tile { min-height: 380px; }
+  /* title stays at the top, the animation sits centred in the space below it */
+  .work > * > .pipe-head { margin-bottom: auto; }
+  .work > * > :last-child { margin-bottom: auto; }
 }
