@@ -5,6 +5,10 @@
  * the terminal, games and easter eggs once the DOM is mounted.
  */
 import { LAND_DOTS } from "@/data/landDots";
+import * as THREE from "three";
+import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
+
+const loadThree = () => Promise.resolve({ THREE, RoomEnvironment });
 
 let started = false;
 
@@ -90,8 +94,8 @@ export function startEngine(): void {
   tick(); setInterval(tick, 20000);
 
   /* ---------- Stack marquee ---------- */
-  var stackA = [["React", "web"], ["Flutter", "mobile"], ["TypeScript", "lang"], ["Python", "lang"], ["Flask", "api"], ["Next.js", "web"]];
-  var stackB = [["Firebase", "cloud"], ["Vite", "tooling"], ["shadcn/ui", "ui"], ["Figma", "design"], ["Git", "tooling"], ["Node.js", "backend"]];
+  var stackA = [["ReactJS", "frontend"], ["JavaScript", "language"], ["Flutter", "mobile"], ["HTML", "web"], ["CSS", "web"]];
+  var stackB = [["Python", "language"], ["Flask", "backend"], ["MySQL", "data"], ["API REST", "integration"], ["Tailwind CSS", "styling"]];
   function fill(id, list) {
     var el = document.getElementById(id), html = "";
     list.concat(list).forEach(function (s) { html += '<span class="chip">' + s[0] + ' <small>' + s[1] + '</small></span>'; });
@@ -577,39 +581,335 @@ export function startEngine(): void {
   });
   ["pointerup", "pointercancel"].forEach(function (ev) { gCan.addEventListener(ev, function () { gDrag = false; }); });
 
-  /* ---------- Full stack, literally: the app explodes into its layers (3D + parallax) ---------- */
+  /* ---------- Full stack: a real 3D laptop (three.js) opens, the code types, the stack jumps out ---------- */
   (function () {
-    var sec = document.getElementById("craft"), stack = document.getElementById("xs-stack");
-    if (!sec || !stack) return;
-    var layers = stack.querySelectorAll(".xs-layer");
-    var bg = document.getElementById("xs-bgword"), head = document.getElementById("xs-head"), cap = document.getElementById("xs-cap");
-    var tmx = 0, tmy = 0, mx = 0, my = 0, on = false, lastCap = "";
+    var sec = document.getElementById("craft"), cv = document.getElementById("lp-gl");
+    if (!sec || !cv) return;
+    var sticky = document.getElementById("lp-sticky"), scr = document.getElementById("lp-screen");
+    var codeEl = document.getElementById("lp-code"), st = document.getElementById("lp-st"), ed = document.getElementById("lp-ed");
+    var build = document.getElementById("lp-build"), bt = document.getElementById("lp-bt"), bp = document.getElementById("lp-bp"), app = document.getElementById("lp-app");
+    var head = document.getElementById("lp-head"), cap = document.getElementById("lp-cap"), footEl = sec.querySelector(".lp-foot");
+    var chipsEl = document.getElementById("lp-chips"), over = document.getElementById("lp-over"), view = document.getElementById("lp-view");
+    var stackSec = document.querySelector(".lp-next"); // the section the screen turns into (Stack)
+    var SW = 1000, SH = 625;
+
+    // ---- the file that gets typed: [text, class, stack name]
+    var L = [
+      [["import", "k"], [" { ", "p"], ["Python", "t", "Python"], [", ", "p"], ["Flask", "t", "Flask"], [" } ", "p"], ["from", "k"], [' "@gn/backend"', "s"], [";", "p"]],
+      [["import", "k"], [" { ", "p"], ["ReactJS", "t", "ReactJS"], [", ", "p"], ["JavaScript", "t", "JavaScript"], [" } ", "p"], ["from", "k"], [' "@gn/frontend"', "s"], [";", "p"]],
+      [["import", "k"], [" { ", "p"], ["Flutter", "t", "Flutter"], [" } ", "p"], ["from", "k"], [' "@gn/mobile"', "s"], [";", "p"]],
+      [["import", "k"], [" { ", "p"], ["MySQL", "t", "MySQL"], [", ", "p"], ["API_REST", "t", "API REST"], [" } ", "p"], ["from", "k"], [' "@gn/data"', "s"], [";", "p"]],
+      [["import", "k"], [" { ", "p"], ["HTML", "t", "HTML"], [", ", "p"], ["CSS", "t", "CSS"], [", ", "p"], ["Tailwind", "t", "Tailwind CSS"], [" } ", "p"], ["from", "k"], [' "@gn/web"', "s"], [";", "p"]],
+      [],
+      [["export default", "k"], [" build", "t"], ["({ ", "p"], ["fullStack", "t"], [": ", "p"], ["true", "s"], [" });", "p"]]
+    ];
+    // where each stack settles, in world units around the laptop
+    var TGT = [[-2.1, 1.7, 0.3], [2.15, 1.55, 0.1], [-2.3, 0.75, 0.8], [2.35, 0.85, 0.7], [-1.45, 2.2, -0.4],
+      [1.5, 2.25, -0.5], [-1.95, 0.15, 1.2], [2.0, 0.2, 1.1], [0, 2.4, -0.6], [0.25, 0.05, 1.5]];
+    var total0 = 0, chips = [], ci = 0;
+    L.forEach(function (line) { line.s = total0; line.forEach(function (tk) {
+      tk.start = total0; total0 += tk[0].length;
+      if (tk[2]) {
+        var c = document.createElement("span"); c.className = "lp-chip"; c.textContent = tk[2]; chipsEl.appendChild(c);
+        var o = { el: c, tok: tk, at: tk.start + tk[0].length, tg: TGT[ci++], ph: Math.random() * 6.28, hl: 0 };
+        c.addEventListener("click", function () { o.hl = performance.now(); c.classList.remove("hit"); void c.offsetWidth; c.classList.add("hit"); setTimeout(function () { c.classList.remove("hit"); }, 1200); });
+        chips.push(o);
+      }
+    }); total0 += 1; });
+    function esc(s) { return s.replace(/&/g, "&amp;").replace(/</g, "&lt;"); }
+    function render(n, now) {
+      var out = [];
+      L.forEach(function (line, li) {
+        if (li > 0 && n < line.s) return;
+        var s = "";
+        line.forEach(function (tk) {
+          var k = n - tk.start; if (k <= 0) return;
+          var hl = tk[2] && chips.some(function (c) { return c.tok === tk && now - c.hl < 1200; });
+          s += '<span class="' + tk[1] + (hl ? " hl" : "") + '">' + esc(tk[0].slice(0, k)) + "</span>";
+        });
+        out.push(s);
+      });
+      return out.join("\n") + '<span class="cur"></span>';
+    }
+
+    // ---- the next section (Stack), copied onto the screen
+    var realTracks = [], copyTracks = [];
+    function makeCopy() {
+      if (!stackSec) return;
+      // copy the next section, plus whatever follows it, until a full screen is filled
+      var c = document.createElement("div"), el = stackSec, h = 0;
+      while (el && h < innerHeight + 40) {
+        var k = el.cloneNode(true); k.classList.remove("lp-next");
+        k.removeAttribute("id"); k.querySelectorAll("[id]").forEach(function (x) { x.removeAttribute("id"); });
+        k.querySelectorAll("[data-reveal],[data-scramble],.pre").forEach(function (x) { x.removeAttribute("data-reveal"); x.removeAttribute("data-scramble"); x.classList.remove("pre"); x.classList.add("in"); });
+        c.appendChild(k); h += el.offsetHeight; el = el.nextElementSibling;
+      }
+      view.innerHTML = ""; view.appendChild(c);
+      view.style.width = innerWidth + "px"; view.style.height = innerHeight + "px";
+      realTracks = Array.prototype.slice.call(stackSec.querySelectorAll(".track")); copyTracks = Array.prototype.slice.call(c.querySelectorAll(".track"));
+    }
+    makeCopy();
+    function syncTracks() {
+      // the timeline rail fills with scroll on the real section; mirror it on the copy
+      var rt = stackSec && stackSec.querySelector(".timeline"), ct = view.querySelector(".timeline");
+      if (rt && ct) ct.style.setProperty("--p", rt.style.getPropertyValue("--p") || "0");
+      realTracks.forEach(function (rt, i) {
+        var a = rt.getAnimations && rt.getAnimations()[0], b = copyTracks[i] && copyTracks[i].getAnimations && copyTracks[i].getAnimations()[0];
+        if (a && b && a.currentTime != null) b.currentTime = a.currentTime;
+      });
+    }
+
+    // ---- glitches on the screen
+    var lidOpen = false, wasShow = false, glT = 0, on = false;
+    function glitch(big) {
+      if (reduce) return;
+      scr.style.setProperty("--gy", (Math.random() * 82).toFixed(1) + "%"); scr.style.setProperty("--gh", (4 + Math.random() * 12).toFixed(1) + "%");
+      scr.classList.remove("gl", "big"); void scr.offsetWidth; scr.classList.add(big ? "big" : "gl");
+      clearTimeout(glT); glT = setTimeout(function () { scr.classList.remove("gl", "big"); }, big ? 700 : 320);
+    }
+    (function loop() {
+      if (on && lidOpen) { glitch(false); if (Math.random() < 0.35) setTimeout(function () { glitch(false); }, 380); }
+      setTimeout(loop, 1600 + Math.random() * 3200);
+    })();
+
+    // ---- three.js scene: only built when the section gets close, so the page loads light
+    // (if three.js fails to load, the rest of the page keeps working)
+    var glStarted = false;
+    function startGL() { if (glStarted) return; glStarted = true; buildGL(); }
+    if ("IntersectionObserver" in window) {
+      var near = new IntersectionObserver(function (en) { if (en[0].isIntersecting) { near.disconnect(); startGL(); } }, { rootMargin: "150% 0px" });
+      near.observe(sec);
+    } else startGL();
+    function buildGL() {
+    loadThree().then(function (mod) {
+    var THREE = mod.THREE, RoomEnvironment = mod.RoomEnvironment;
+    var renderer;
+    try { renderer = new THREE.WebGLRenderer({ canvas: cv, antialias: true, alpha: true, powerPreference: "high-performance" }); }
+    catch (err) { cv.style.display = "none"; return; }
+    renderer.setClearColor(0x000000, 0);
+    renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05;
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    var scene = new THREE.Scene(), camera = new THREE.PerspectiveCamera(30, 1, 0.05, 100);
+    var pmrem = new THREE.PMREMGenerator(renderer);
+    scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+    var sun = new THREE.DirectionalLight(0xffffff, 1.4); sun.position.set(3, 6, 4); scene.add(sun);
+    var rim = new THREE.DirectionalLight(0xf7a8a9, 0.9); rim.position.set(-4, 2, -4); scene.add(rim);
+
+    function rrShape(w, h, r) {
+      var s = new THREE.Shape(), x = -w / 2, y = -h / 2;
+      s.moveTo(x + r, y); s.lineTo(x + w - r, y); s.quadraticCurveTo(x + w, y, x + w, y + r); s.lineTo(x + w, y + h - r);
+      s.quadraticCurveTo(x + w, y + h, x + w - r, y + h); s.lineTo(x + r, y + h); s.quadraticCurveTo(x, y + h, x, y + h - r);
+      s.lineTo(x, y + r); s.quadraticCurveTo(x, y, x + r, y); return s;
+    }
+    var BW = 3.0, BD = 2.06, BH = 0.075, LW = 3.0, LH = 1.98, LT = 0.04;
+    var DW = 2.78, DH = DW / 1.6, DY = 0.135; // display size and its bottom edge on the lid
+    var alu = new THREE.MeshStandardMaterial({ metalness: 0.8, roughness: 0.34 });
+    var aluDark = new THREE.MeshStandardMaterial({ metalness: 0.7, roughness: 0.45 });
+    var glass = new THREE.MeshStandardMaterial({ color: 0x050506, metalness: 0.3, roughness: 0.12 });
+    var keyMat = new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: 0.15, roughness: 0.55 });
+    var padMat = new THREE.MeshStandardMaterial({ metalness: 0.65, roughness: 0.22 });
+    function themeColors() {
+      var dark = root.getAttribute("data-theme") ? root.getAttribute("data-theme") === "dark" : !matchMedia("(prefers-color-scheme: light)").matches;
+      alu.color.set(dark ? 0x48494e : 0xc9ccd1); aluDark.color.set(dark ? 0x26272a : 0xaeb2b8); padMat.color.set(dark ? 0x45464b : 0xd3d6da);
+      keyBase.set(dark ? 0x0d0d0f : 0x1b1c1f);
+      if (keys) for (var i = 0; i < keyCount; i++) keys.setColorAt(i, keyBase);
+      if (keys && keys.instanceColor) keys.instanceColor.needsUpdate = true;
+      rim.intensity = dark ? 0.9 : 0.35;
+    }
+    var keyBase = new THREE.Color(0x0d0d0f), keyHot = new THREE.Color(0xf7a8a9), keys = null, keyCount = 0, keyFlash = [];
+    var laptop = new THREE.Group(); scene.add(laptop);
+    // base
+    var bGeo = new THREE.ExtrudeGeometry(rrShape(BW, BD, 0.14), { depth: BH, bevelEnabled: true, bevelThickness: 0.012, bevelSize: 0.012, bevelSegments: 3, curveSegments: 12 });
+    bGeo.rotateX(-Math.PI / 2); var base = new THREE.Mesh(bGeo, alu); laptop.add(base);
+    var top0 = BH + 0.012;
+    // keyboard well, keys, trackpad
+    var well = new THREE.Mesh(new THREE.ShapeGeometry(rrShape(2.62, 1.0, 0.05)), aluDark); well.rotation.x = -Math.PI / 2; well.position.set(0, top0 + 0.001, -0.37); laptop.add(well);
+    var ROWS = [[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1.5], [1.5, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+      [1.8, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1.75], [2.3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2.3], [1, 1, 1, 1.25, 5.3, 1.25, 1, 1, 1, 1]];
+    ROWS.forEach(function (r) { keyCount += r.length; });
+    keys = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), keyMat, keyCount);
+    (function () {
+      var m = new THREE.Matrix4(), q = new THREE.Quaternion(), idx = 0, z = -0.83, KW = 2.5, gap = 0.024;
+      // unit width chosen so every row ends exactly at the edge of the keyboard well
+      ROWS.forEach(function (row, ri) {
+        var units = row.reduce(function (a, b) { return a + b; }, 0), u = (KW - gap * (units - 1)) / units, d = ri === 0 ? 0.075 : 0.142, x = -KW / 2;
+        row.forEach(function (w) {
+          var kw = u * w + gap * (w - 1);
+          m.compose(new THREE.Vector3(x + kw / 2, top0 + 0.012, z + d / 2), q, new THREE.Vector3(kw, 0.022, d));
+          keys.setMatrixAt(idx, m); keys.setColorAt(idx, keyBase); keyFlash[idx] = 0; idx++; x += kw + gap;
+        });
+        z += d + gap;
+      });
+    })();
+    laptop.add(keys);
+    var pad = new THREE.Mesh(new THREE.ShapeGeometry(rrShape(1.18, 0.7, 0.06)), padMat); pad.rotation.x = -Math.PI / 2; pad.position.set(0, top0 + 0.0015, 0.56); laptop.add(pad);
+    // lid on a hinge at the back of the base
+    var hinge = new THREE.Group(); hinge.position.set(0, top0, -BD / 2 + 0.03); laptop.add(hinge);
+    var lGeo = new THREE.ExtrudeGeometry(rrShape(LW, LH, 0.13), { depth: LT, bevelEnabled: true, bevelThickness: 0.008, bevelSize: 0.008, bevelSegments: 2, curveSegments: 12 });
+    lGeo.translate(0, LH / 2, -LT); var lid = new THREE.Mesh(lGeo, alu); hinge.add(lid);
+    var bezel = new THREE.Mesh(new THREE.ShapeGeometry(rrShape(LW - 0.05, LH - 0.05, 0.11)), glass); bezel.position.set(0, LH / 2, 0.0095); hinge.add(bezel);
+    // the logo on the back of the lid
+    (function () {
+      var c = document.createElement("canvas"); c.width = 512; c.height = 256; var g = c.getContext("2d");
+      g.fillStyle = "#fff"; g.font = "500 150px " + (getComputedStyle(root).getPropertyValue("--mono") || "monospace"); g.textAlign = "center"; g.textBaseline = "middle"; g.fillText("gn_", 256, 128);
+      var tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
+      var logo = new THREE.Mesh(new THREE.PlaneGeometry(0.62, 0.31), new THREE.MeshBasicMaterial({ map: tex, transparent: true, opacity: 0.55 }));
+      logo.position.set(0, LH / 2, -LT - 0.0105); logo.rotation.set(0, Math.PI, Math.PI); hinge.add(logo);
+    })();
+    // soft contact shadow
+    (function () {
+      var c = document.createElement("canvas"); c.width = c.height = 256; var g = c.getContext("2d"), gr = g.createRadialGradient(128, 128, 10, 128, 128, 128);
+      gr.addColorStop(0, "rgba(0,0,0,0.55)"); gr.addColorStop(0.6, "rgba(0,0,0,0.25)"); gr.addColorStop(1, "rgba(0,0,0,0)"); g.fillStyle = gr; g.fillRect(0, 0, 256, 256);
+      var sh = new THREE.Mesh(new THREE.PlaneGeometry(4.6, 3.4), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c), transparent: true, depthWrite: false }));
+      sh.rotation.x = -Math.PI / 2; sh.position.y = -0.012; laptop.add(sh);
+    })();
+    laptop.position.y = -0.55;
+    themeColors();
+    themeBtn.addEventListener("click", function () { setTimeout(themeColors, 80); });
+    var W = 0, H = 0;
+    function size() {
+      W = sticky.clientWidth; H = sticky.clientHeight;
+      renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1)); renderer.setSize(W, H, false);
+      camera.aspect = W / H; camera.updateProjectionMatrix(); makeCopy();
+    }
+    size(); addEventListener("resize", size);
+
+    // ---- 4-point perspective mapping of the HTML screen onto the 3D display
+    function adj(m) { return [m[4] * m[8] - m[5] * m[7], m[2] * m[7] - m[1] * m[8], m[1] * m[5] - m[2] * m[4], m[5] * m[6] - m[3] * m[8], m[0] * m[8] - m[2] * m[6], m[2] * m[3] - m[0] * m[5], m[3] * m[7] - m[4] * m[6], m[1] * m[6] - m[0] * m[7], m[0] * m[4] - m[1] * m[3]]; }
+    function mm(a, b) { var c = []; for (var i = 0; i < 3; i++) for (var j = 0; j < 3; j++) { var s = 0; for (var k = 0; k < 3; k++) s += a[3 * i + k] * b[3 * k + j]; c[3 * i + j] = s; } return c; }
+    function mv(m, v) { return [m[0] * v[0] + m[1] * v[1] + m[2] * v[2], m[3] * v[0] + m[4] * v[1] + m[5] * v[2], m[6] * v[0] + m[7] * v[1] + m[8] * v[2]]; }
+    function basis(p) { var m = [p[0], p[2], p[4], p[1], p[3], p[5], 1, 1, 1], v = mv(adj(m), [p[6], p[7], 1]); return mm(m, [v[0], 0, 0, 0, v[1], 0, 0, 0, v[2]]); }
+    function homography(src, dst) { var t = mm(basis(dst), adj(basis(src))); for (var i = 0; i < 9; i++) t[i] /= t[8]; return "matrix3d(" + [t[0], t[3], 0, t[6], t[1], t[4], 0, t[7], 0, 0, 1, 0, t[2], t[5], 0, t[8]].join(",") + ")"; }
+    var SRC = [0, 0, SW, 0, SW, SH, 0, SH];
+    var LOC = [new THREE.Vector3(-DW / 2, DY + DH, 0.0105), new THREE.Vector3(DW / 2, DY + DH, 0.0105), new THREE.Vector3(DW / 2, DY, 0.0105), new THREE.Vector3(-DW / 2, DY, 0.0105)];
+    var tmp = new THREE.Vector3(), tmp2 = new THREE.Vector3(), pts = [], vis = true;
+    function project(v) { tmp.copy(v).project(camera); return [(tmp.x + 1) / 2 * W, (1 - tmp.y) / 2 * H, tmp.z]; }
+
+    // ---- interaction
+    var tmx = 0, tmy = 0, mx = 0, my = 0, lastN = -1, lastHl = 0, lastCap = "", offX = 0, offY = 0, navEl = document.querySelector(".nav");
+    // outline points of the laptop (base corners + lid top corners) used to centre it
+    var BOX = [new THREE.Vector3(-BW / 2, 0, BD / 2), new THREE.Vector3(BW / 2, 0, BD / 2), new THREE.Vector3(-BW / 2, 0, -BD / 2), new THREE.Vector3(BW / 2, 0, -BD / 2)];
+    [new THREE.Vector3(-LW / 2, LH, 0), new THREE.Vector3(LW / 2, LH, 0), new THREE.Vector3(-LW / 2, LH, -LT), new THREE.Vector3(LW / 2, LH, -LT)].forEach(function (v) { v.lid = true; BOX.push(v); });
     addEventListener("pointermove", function (e) { if (!on) return; tmx = e.clientX / innerWidth - 0.5; tmy = e.clientY / innerHeight - 0.5; }, { passive: true });
     function cl(x) { return Math.max(0, Math.min(1, x)); }
     function ease(x) { x = cl(x); return x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2; }
+    function back(x) { x = cl(x); var c1 = 1.5; return 1 + (c1 + 1) * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2); }
+    function lerp(a, b, t) { return a + (b - a) * t; }
+    var target = new THREE.Vector3(), camPos = new THREE.Vector3(), up = new THREE.Vector3(), C = new THREE.Vector3(), N = new THREE.Vector3(), U = new THREE.Vector3();
+    var fromPos = new THREE.Vector3(), fromTgt = new THREE.Vector3();
+
+    var stackVis = null;
+    function setStackVis() {
+      if (!stackSec) return;
+      var v = stackSec.getBoundingClientRect().top > 0.5 ? "hidden" : "";
+      if (v !== stackVis) { stackVis = v; stackSec.style.visibility = v; document.body.classList.toggle("lp-zooming", v === "hidden"); }
+    }
     function frame(ts) {
       var r = sec.getBoundingClientRect(), span = Math.max(1, sec.offsetHeight - innerHeight);
-      var p = cl(-r.top / span), t = ts / 1000;
-      if (reduce) p = 0.7;
-      mx += (tmx - mx) * 0.07; my += (tmy - my) * 0.07;
-      var e = ease((p - 0.06) / 0.42), spread = ease((p - 0.16) / 0.44), size = stack.offsetWidth / 360;
-      var rx = 58 * e - my * 14, rz = -38 * e + mx * 10, ry = mx * 14 * (1 - e * 0.4), lift = -40 * spread * size;
-      stack.style.transform = "translateY(" + (lift + Math.sin(t * 1.1) * 6 * e).toFixed(1) + "px) rotateX(" + rx.toFixed(2) + "deg) rotateY(" + ry.toFixed(2) + "deg) rotateZ(" + rz.toFixed(2) + "deg)";
-      var gap = 104 * size * spread, n = layers.length;
-      layers.forEach(function (L, i) {
-        var z = (i - (n - 1) / 2) * gap + i * 0.6 + Math.sin(t * 1.4 + i * 0.9) * 5 * spread;
-        L.style.transform = "translateZ(" + z.toFixed(1) + "px)";
-        L.style.setProperty("--tag", cl((p - 0.42 - i * 0.03) / 0.1).toFixed(2));
+      // once the real Stack section covers the scene, stop drawing the 3D laptop
+      if (stackSec && stackSec.getBoundingClientRect().top <= 0.5 && -r.top >= span - 1) { setStackVis(); return; }
+      var p = reduce ? 0.7 : cl(-r.top / span), t = ts / 1000, now = performance.now(), small = W < 700;
+      mx += (tmx - mx) * 0.06; my += (tmy - my) * 0.06;
+      // phases: open 0.03-0.26 · type 0.26-0.52 · build 0.53-0.6 · stack on screen 0.6 · zoom into it 0.72-1
+      var o = ease((p - 0.03) / 0.23), ez = ease((p - 0.72) / 0.28), ea = ease(ez / 0.45), eb = ease((ez - 0.45) / 0.55);
+      hinge.rotation.x = Math.PI / 2 - (Math.PI / 2 + 0.3) * o + Math.PI * 0.0;
+      laptop.rotation.y = (-0.5 + 0.5 * ease((p - 0.08) / 0.4)) * (1 - ea);
+      laptop.position.y = -0.55 + Math.sin(t * 0.9) * 0.03 * (1 - ea);
+      laptop.updateMatrixWorld(true);
+      // orbit camera: above when closed, three-quarter when open, follows the mouse
+      var theta = (-0.35 + 0.35 * o) + mx * 0.55, phi = lerp(0.5, 1.22, o) + my * 0.22;
+      var fit = Math.max(1, 4.4 / (2 * Math.tan(THREE.MathUtils.degToRad(15)) * camera.aspect) / 7.2);
+      // while the title is on screen, the laptop lives in the space below it (and steps back to fit)
+      var hv = 1 - cl((p - 0.06) / 0.08), hb = head.getBoundingClientRect().bottom - sticky.getBoundingClientRect().top + 28;
+      var navB0 = navEl ? Math.max(0, navEl.getBoundingClientRect().bottom - sticky.getBoundingClientRect().top) : 0;
+      var areaTop = navB0 + Math.max(0, hb - navB0) * hv, room = Math.max(0.35, (H - areaTop) / Math.max(1, H - navB0));
+      var rad = lerp(8.4, 7.8, o) * fit / Math.pow(room, 0.9);
+      fromTgt.set(0, lerp(-0.4, 0.45, o), 0);
+      fromPos.set(fromTgt.x + rad * Math.sin(phi) * Math.sin(theta), fromTgt.y + rad * Math.cos(phi), fromTgt.z + rad * Math.sin(phi) * Math.cos(theta));
+      // the display: centre, normal and up, in world space
+      C.set(0, DY + DH / 2, 0.0105); hinge.localToWorld(C);
+      N.set(0, 0, 1).transformDirection(hinge.matrixWorld); U.set(0, 1, 0).transformDirection(hinge.matrixWorld);
+      var tn = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)), dCover = Math.min(DH / (2 * tn), DW / (2 * tn * camera.aspect)) * 0.996;
+      if (ez > 0) {
+        tmp2.copy(N).multiplyScalar(dCover * 2.6).add(C);
+        camPos.copy(fromPos).lerp(tmp2, ea); target.copy(fromTgt).lerp(C, ea); up.set(0, 1, 0).lerp(U, ea).normalize();
+        if (eb > 0) { tmp2.copy(N).multiplyScalar(lerp(dCover * 2.6, dCover, eb)).add(C); camPos.copy(tmp2); target.copy(C); up.copy(U); }
+      } else { camPos.copy(fromPos); target.copy(fromTgt); up.set(0, 1, 0); }
+      camera.position.copy(camPos); camera.up.copy(up); camera.lookAt(target); camera.updateMatrixWorld();
+      // keep the laptop centred below the nav: measure its outline and shift the view (released during the zoom)
+      var navB = navEl ? Math.max(0, navEl.getBoundingClientRect().bottom - sticky.getBoundingClientRect().top) : 0;
+      var x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
+      BOX.forEach(function (v) { tmp2.copy(v); (v.lid ? hinge : laptop).localToWorld(tmp2); var q = project(tmp2); x0 = Math.min(x0, q[0]); x1 = Math.max(x1, q[0]); y0 = Math.min(y0, q[1]); y1 = Math.max(y1, q[1]); });
+      var keep = 1 - ea;
+      offX += (((x0 + x1) / 2 - W / 2) * 0.25) * keep; offY += (((y0 + y1) / 2 - (areaTop + H) / 2) * 0.25) * keep;
+      offX *= keep > 0.999 ? 1 : keep; offY *= keep > 0.999 ? 1 : keep;
+      if (Math.abs(offX) > 0.05 || Math.abs(offY) > 0.05) camera.setViewOffset(W, H, offX, offY, W, H); else camera.clearViewOffset();
+      camera.updateProjectionMatrix();
+      // key presses glow pink
+      var n = Math.round(total0 * cl((p - 0.26) / 0.26));
+      if (n > lastN && lastN >= 0 && !reduce) for (var k = 0; k < Math.min(3, n - lastN); k++) keyFlash[Math.floor(Math.random() * keyCount)] = 1;
+      var dirty = false;
+      for (var i = 0; i < keyCount; i++) if (keyFlash[i] > 0) { keyFlash[i] = Math.max(0, keyFlash[i] - 0.08); tmp.set(0, 0, 0); var cc = keyBase.clone().lerp(keyHot, keyFlash[i]); keys.setColorAt(i, cc); dirty = true; }
+      if (dirty) keys.instanceColor.needsUpdate = true;
+      renderer.render(scene, camera);
+
+      // map the HTML screen onto the display
+      pts = LOC.map(function (v) { tmp2.copy(v); hinge.localToWorld(tmp2); return project(tmp2); });
+      tmp.copy(camera.position).sub(C);
+      var facing = tmp.dot(N) > 0 && pts.every(function (q) { return q[2] < 1; });
+      var so = facing ? cl((o - 0.55) / 0.3) : 0;
+      scr.style.opacity = so.toFixed(3);
+      if (so > 0) scr.style.transform = homography(SRC, [pts[0][0], pts[0][1], pts[1][0], pts[1][1], pts[2][0], pts[2][1], pts[3][0], pts[3][1]]);
+      // typing, build, then the stack on screen
+      var bld = cl((p - 0.53) / 0.07), hlOn = chips.some(function (c) { return now - c.hl < 1250; });
+      if (n !== lastN || hlOn || lastHl) { lastN = n; codeEl.innerHTML = render(n, now); lastHl = hlOn ? 1 : 0; }
+      st.textContent = n >= total0 ? "● saved" : n > 0 ? "● editing" : "○ empty";
+      build.style.opacity = bld > 0 ? 1 : 0; bp.style.transform = "scaleX(" + bld.toFixed(3) + ")";
+      bt.textContent = bld >= 1 ? "✓ compiled" : "$ npm run build";
+      var showNow = p > 0.61;
+      if (showNow !== wasShow) { wasShow = showNow; if (so > 0.5) glitch(true); }
+      app.classList.toggle("show", showNow); lidOpen = o > 0.9 && ez <= 0;
+      app.style.opacity = cl((p - 0.6) / 0.04).toFixed(3); ed.style.opacity = (1 - cl((p - 0.61) / 0.04)).toFixed(3);
+      if (showNow) syncTracks();
+      scr.classList.toggle("zoom", ez > 0.01);
+      // the copy of the Stack section: whole page, at real size once the screen fills the view
+      var bx0 = Math.min(pts[0][0], pts[3][0]), bx1 = Math.max(pts[1][0], pts[2][0]), by0 = Math.min(pts[0][1], pts[1][1]), by1 = Math.max(pts[2][1], pts[3][1]);
+      var rw = Math.max(1, bx1 - bx0), rh = Math.max(1, by1 - by0), fitS = Math.min(rw / innerWidth, rh / innerHeight);
+      if (eb > 0.02) {
+        if (view.parentNode !== over) over.appendChild(view);
+        over.style.display = "block";
+        var gk = cl((eb - 0.8) / 0.2); // the last stretch: the panel grows to the full view so no bezel peeks out
+        over.style.left = lerp(bx0, 0, gk).toFixed(2) + "px"; over.style.top = lerp(by0, 0, gk).toFixed(2) + "px";
+        over.style.width = lerp(rw, W, gk).toFixed(2) + "px"; over.style.height = lerp(rh, H, gk).toFixed(2) + "px";
+        over.style.borderRadius = (10 * (1 - eb)).toFixed(2) + "px";
+        view.style.transform = "translate(-50%,-50%) scale(" + fitS.toFixed(5) + ")";
+      } else {
+        if (view.parentNode !== app) app.insertBefore(view, app.firstChild);
+        over.style.display = "none";
+        view.style.transform = "translate(-50%,-50%) scale(" + Math.min(SW / innerWidth, SH / innerHeight).toFixed(5) + ")";
+      }
+      // stacks fly out of the screen and float around the laptop
+      var fade = 1 - cl(ez * 3);
+      chips.forEach(function (c) {
+        var e = cl((n - c.at + 1) / 18), ae = back(e), g = c.tg;
+        tmp2.set(g[0] * (small ? 0.7 : 1), g[1] - 0.55 + Math.sin(t * 1.2 + c.ph) * 0.06, g[2]);
+        laptop.localToWorld(tmp2.add(new THREE.Vector3(0, 0.55, 0)));
+        var pos = C.clone().lerp(tmp2, ae), q = project(pos), dist = camera.position.distanceTo(pos), s = cl(7 / dist) * (0.4 + 0.6 * ae);
+        c.el.style.visibility = fade > 0.01 && e > 0 ? "visible" : "hidden";
+        c.el.style.opacity = (Math.min(1, e * 3) * fade).toFixed(2);
+        c.el.style.transform = "translate(" + q[0].toFixed(1) + "px," + q[1].toFixed(1) + "px) translate(-50%,-50%) rotate(" + ((1 - e) * 120).toFixed(1) + "deg) scale(" + s.toFixed(3) + ")";
       });
-      // parallax: the big outline word drifts slower, the heading faster
-      bg.style.transform = "translate(calc(-50% + " + (mx * -40 + (p - 0.5) * -160).toFixed(1) + "px), calc(-50% + " + (my * -30).toFixed(1) + "px))";
-      if (innerWidth >= 900) head.style.transform = "translateY(calc(-50% + " + ((0.5 - p) * 120 + my * 18).toFixed(1) + "px))";
-      else head.style.transform = "translateY(" + ((0.3 - p) * 60).toFixed(1) + "px)";
-      var c = p < 0.12 ? "// scroll to take it apart" : spread < 0.98 ? "// git checkout --exploded-view" : (innerWidth < 600 ? "// five layers, one app" : "// five layers, one app · move the mouse to orbit");
-      if (c !== lastCap) { lastCap = c; cap.textContent = c; }
+      head.style.transform = "translate3d(" + (mx * -16).toFixed(1) + "px," + (-36 * (1 - hv)).toFixed(1) + "px,0)";
+      head.style.opacity = hv.toFixed(3);
+      footEl.style.opacity = (1 - cl(ez * 4)).toFixed(3);
+      setStackVis();
+      var c2 = p < 0.04 ? "// scroll to open" : o < 0.98 ? "// opening…" : n < total0 ? "// writing stack.ts" : bld < 1 ? "// npm run build" : ez > 0 ? "// entering…" : "// keep scrolling to go inside";
+      if (c2 !== lastCap) { lastCap = c2; cap.textContent = c2; cap.classList.remove("swap"); void cap.offsetWidth; cap.classList.add("swap"); }
     }
-    if ("IntersectionObserver" in window) new IntersectionObserver(function (en) { on = en[0].isIntersecting; }, { rootMargin: "120px 0px" }).observe(sec); else on = true;
+    if ("IntersectionObserver" in window) new IntersectionObserver(function (en) { on = en[0].isIntersecting; if (!on && stackSec) { stackSec.style.visibility = ""; stackVis = ""; document.body.classList.remove("lp-zooming"); } }, { rootMargin: "120px 0px" }).observe(sec); else on = true;
     (function loop(ts) { if (on) frame(ts || 0); requestAnimationFrame(loop); })(0);
+    }).catch(function () { cv.style.display = "none"; });
+    }
   })();
 
   /* ---------- Terminal ---------- */
@@ -1257,8 +1557,9 @@ export function startEngine(): void {
     function readScroll() {
       var r = sec.getBoundingClientRect(), total = sec.offsetHeight - innerHeight;
       progress = Math.min(1, Math.max(0, -r.top / total));
-      // the scroll only picks which shape is showing; the change itself plays on its own
-      var idx = Math.min(shapes.length - 1, Math.floor(progress * shapes.length));
+      // the first stretch of scroll turns the tornado into the first shape; after that the scroll picks the shape
+      var q = Math.max(0, (progress - PRE) / (1 - PRE));
+      var idx = Math.min(shapes.length - 1, Math.floor(q * shapes.length));
       if (idx !== target) { prevStage = target < 0 ? idx : target; target = idx; switchAt = performance.now(); }
       if (idx !== shown) {
         var first = shown === -1;
@@ -1268,11 +1569,33 @@ export function startEngine(): void {
       }
       mcBar.style.transform = "scaleX(" + progress + ")";
     }
-    var target = -1, prevStage = 0, switchAt = -1e9;
+    var target = -1, prevStage = 0, switchAt = -1e9, PRE = 0.14;
     addEventListener("scroll", readScroll, { passive: true }); readScroll();
-    var fr = 0;
+    // galaxy: each dot sits on one of three spiral arms (or in the bright core)
+    P.forEach(function (p, i) {
+      var core = Math.random() < 0.16;
+      p.gr = core ? Math.abs((Math.random() + Math.random() + Math.random() - 1.5) / 1.5) * 0.12 : 0.06 + Math.pow(Math.random(), 0.75) * 0.94;
+      p.ga = core ? Math.random() * 6.283 : (i % 3) * 2.094 + p.gr * 5.2 + (Math.random() - 0.5) * (0.75 - p.gr * 0.3);
+      p.gz = (Math.random() - 0.5) * 0.05 * (1 - p.gr);
+    });
+    var capEl = sec.querySelector(".morph-cap"), lastCapO = -1;
+    var fr = 0, asleep = true, lastVis = -1, uiBits = Array.prototype.slice.call(sec.querySelectorAll(".morph-hint"));
+    function scatter() {
+      // everything starts in the core; the galaxy unfolds from there
+      for (var i = 0; i < N; i++) { var p = P[i]; p.x = ox + (Math.random() - 0.5) * 6; p.y = oy + (Math.random() - 0.5) * 4; p.vx = p.vy = 0; }
+    }
+    scatter();
     (function loop(ts) {
-      if (on) {
+      // stay hidden until the section is actually arriving; then the dots assemble as you scroll in
+      var vis = 1;
+      if (on && !reduce) {
+        var rr = sec.getBoundingClientRect();
+        vis = Math.max(0, Math.min(1, 1 - rr.top / (innerHeight * 0.75)));
+        if (vis <= 0) { if (!asleep) { asleep = true; scatter(); } cx.clearRect(0, 0, W, H); }
+        else asleep = false;
+      }
+      if (vis !== lastVis) { lastVis = vis; var vs = vis.toFixed(3); uiBits.forEach(function (el) { el.style.opacity = vs; }); }
+      if (on && vis > 0) {
         if (++fr % 90 === 0) colors();
         var time = reduce ? 0 : ts / 1000, since = performance.now() - switchAt;
         var switching = !reduce && since < 260 && prevStage !== target;
@@ -1280,8 +1603,22 @@ export function startEngine(): void {
         if (switching) shapes[prevStage].evalAll(time, TA);
         cx.clearRect(0, 0, W, H);
         cx.fillStyle = col.fg;
+        var form = reduce ? 1 : Math.min(1, progress / PRE);
+        var capO = vis * Math.max(0, Math.min(1, (form - 0.7) / 0.3));
+        if (Math.abs(capO - lastCapO) > 0.01 && capEl) { lastCapO = capO; capEl.style.opacity = capO.toFixed(3); }
         for (var i = 0; i < N; i++) {
-          var p = P[i], T = switching && since < p.th * 260 ? TA : TB, tx = ox + T[2 * i] * scale, ty = oy + T[2 * i + 1] * scale;
+          var p = P[i], T = switching && since < p.th * 260 ? TA : TB, tx = ox + T[2 * i] * scale, ty = oy + T[2 * i + 1] * scale, depth = 1;
+          // still a galaxy? blend from the spiral to the shape, each dot at its own moment
+          var fi = form >= 1 ? 1 : ease(Math.max(0, Math.min(1, form * 1.45 - p.th * 0.45)));
+          if (fi < 1) {
+            // inner stars orbit faster; the disc is tilted so it reads in 3D
+            var grow = ease(Math.max(0, Math.min(1, (vis - p.gr * 0.35) / 0.65)));
+            var ang = p.ga + time * (0.18 + 0.5 / (0.25 + p.gr * 3)) - (1 - grow) * 2.4, rad = p.gr * 0.72 * scale * grow;
+            var gx0 = Math.cos(ang) * rad, gy0 = Math.sin(ang) * rad, tilt = 0.42, rot = -0.35;
+            var wx = ox + gx0 * Math.cos(rot) - gy0 * tilt * Math.sin(rot), wy = oy + gx0 * Math.sin(rot) + gy0 * tilt * Math.cos(rot) + p.gz * scale;
+            depth = (0.5 + 0.5 * (Math.sin(ang) + 1) / 2) * (p.gr < 0.13 ? 1.15 : 1 - p.gr * 0.35);
+            tx = wx + (tx - wx) * fi; ty = wy + (ty - wy) * fi; depth = depth + (1 - depth) * fi;
+          }
           if (!reduce) { tx += Math.sin(time * 1.3 + p.ph) * 1.4; ty += Math.cos(time * 1.1 + p.ph) * 1.4; }
           var dx = p.x - mx, dy = p.y - my, d2 = dx * dx + dy * dy;
           if (d2 < 9000) { var d = Math.sqrt(d2) || 1, push = (1 - d / 95) * 3.2; p.vx += dx / d * push; p.vy += dy / d * push; }
@@ -1291,8 +1628,8 @@ export function startEngine(): void {
             p.vx *= 0.72; p.vy *= 0.72; p.x += p.vx; p.y += p.vy;
           }
           var gx2 = Math.round(p.x / 3) * 3, gy2 = Math.round(p.y / 3) * 3, sp = Math.min(1, Math.hypot(p.vx, p.vy) / 6);
-          cx.globalAlpha = 0.8 + 0.2 * (1 - sp);
-          cx.beginPath(); cx.arc(gx2, gy2, 1.05 + sp * 0.45, 0, 6.283); cx.fill();
+          cx.globalAlpha = (0.8 + 0.2 * (1 - sp)) * vis * depth;
+          cx.beginPath(); cx.arc(gx2, gy2, (1.05 + sp * 0.45) * (0.7 + 0.3 * depth), 0, 6.283); cx.fill();
         }
         cx.globalAlpha = 1;
       }
@@ -1563,15 +1900,89 @@ export function startEngine(): void {
   });
   function openPanel(name) { var t = document.querySelector('.pg-tabs .vt[data-pg="' + name + '"]'); if (t) t.click(); }
 
-  /* ---------- Certificates lightbox ---------- */
+  /* ---------- Certificates: books get placed on the shelf when it scrolls in ---------- */
   (function () {
-    var lb = document.createElement("div"); lb.className = "lightbox"; lb.hidden = true; lb.setAttribute("role", "dialog"); lb.setAttribute("aria-label", "Certificate");
-    var big = document.createElement("img"); big.alt = ""; lb.appendChild(big); document.body.appendChild(lb);
-    function close() { lb.hidden = true; }
-    document.querySelectorAll(".cert-card").forEach(function (c) {
-      c.addEventListener("click", function () { var im = c.querySelector("img"); big.src = im.src; big.alt = im.alt; lb.hidden = false; });
-    });
-    lb.addEventListener("click", close);
+    var shelf = document.getElementById("shelf");
+    if (!shelf || reduce || !("IntersectionObserver" in window)) return;
+    Array.prototype.forEach.call(shelf.querySelectorAll(".books > *"), function (el, i) { el.style.setProperty("--i", i); });
+    if (shelf.getBoundingClientRect().top < innerHeight * 0.85) return; // already on screen: no surprise animation
+    shelf.classList.add("pre");
+    var io = new IntersectionObserver(function (en) {
+      if (!en[0].isIntersecting) return;
+      io.disconnect(); shelf.classList.remove("pre"); shelf.classList.add("in");
+    }, { threshold: 0.35 });
+    io.observe(shelf);
+  })();
+
+  /* ---------- Certificates: pull a book off the shelf, it flies over and opens ---------- */
+  (function () {
+    var books = document.querySelectorAll(".book.real");
+    if (!books.length) return;
+    var ov = document.createElement("div"); ov.className = "bk-overlay"; ov.hidden = true;
+    ov.setAttribute("role", "dialog"); ov.setAttribute("aria-modal", "true"); ov.setAttribute("aria-label", "Certificate");
+    ov.innerHTML =
+      '<div class="bk" id="bk">' +
+        '<div class="bk-shadow"></div><div class="bk-back"></div><div class="bk-spine"></div><div class="bk-edge"></div><div class="bk-edgetop"></div>' +
+        '<div class="bk-pages"><img alt=""></div>' +
+        '<div class="bk-cover"><div class="bk-front"><span class="k"></span><b></b><span class="d"><span></span><span>gn_</span></span></div>' +
+        '<div class="bk-inside"><span class="k">Certificate of completion</span><b></b><span></span></div></div>' +
+      '</div><button class="bk-close" type="button" aria-label="Close">×</button><span class="bk-hint">click anywhere to put it back</span>';
+    document.body.appendChild(ov);
+    var bk = ov.querySelector(".bk"), img = ov.querySelector(".bk-pages img"), current = null, busy = false, timers = [];
+    function later(fn, ms) { timers.push(setTimeout(fn, ms)); }
+    function clearT() { timers.forEach(clearTimeout); timers = []; }
+    // where the book has to start so it looks like it came off the shelf: spine facing us, at the spine's spot
+    function fromShelf(b) {
+      var r = b.getBoundingClientRect(), bh = bk.offsetHeight, s = r.height / bh;
+      var dx = r.left + r.width / 2 - innerWidth / 2, dy = r.top + r.height / 2 - innerHeight / 2;
+      return "translate3d(" + dx.toFixed(1) + "px," + dy.toFixed(1) + "px,0) scale(" + s.toFixed(3) + ") rotateY(90deg)";
+    }
+    function spreadShift() { return innerWidth >= 700 ? bk.offsetWidth / 2 : 0; }
+    // the book takes the shape of its certificate: portrait certificates make a tall book, landscape a wide one
+    function sizeBook(ar) {
+      var maxW = innerWidth >= 700 ? Math.min(520, innerWidth * 0.44) : Math.min(400, innerWidth * 0.82), maxH = innerHeight * (innerWidth >= 700 ? 0.7 : 0.62);
+      var w = maxW, h = w / ar;
+      if (h > maxH) { h = maxH; w = h * ar; }
+      bk.style.setProperty("--bw", w.toFixed(1) + "px"); bk.style.setProperty("--bh", h.toFixed(1) + "px");
+    }
+    function open(b) {
+      if (busy || current) return;
+      var pre = new Image(); pre.src = b.dataset.img;
+      if (!pre.complete || !pre.naturalWidth) { busy = true; pre.onload = pre.onerror = function () { busy = false; b.dataset.ar = pre.naturalWidth ? pre.naturalWidth / pre.naturalHeight : 1.4; open(b); }; return; }
+      b.dataset.ar = pre.naturalWidth / pre.naturalHeight;
+      busy = true; current = b; clearT();
+      sizeBook(parseFloat(b.dataset.ar) * 1.02);
+      var cs = getComputedStyle(b);
+      bk.style.setProperty("--bk-c", cs.backgroundColor); bk.style.setProperty("--bk-ink", cs.color);
+      ov.querySelector(".bk-front .k").textContent = b.dataset.issuer;
+      ov.querySelector(".bk-front b").textContent = b.dataset.title;
+      ov.querySelector(".bk-front .d span").textContent = b.dataset.date;
+      ov.querySelector(".bk-inside b").textContent = b.dataset.title;
+      ov.querySelector(".bk-inside span:not(.k)").textContent = b.dataset.issuer + " · " + b.dataset.date;
+      img.src = b.dataset.img; img.alt = "Certificate: " + b.dataset.title;
+      ov.hidden = false; bk.classList.remove("open");
+      bk.style.transition = "none"; bk.style.transform = fromShelf(b); void bk.offsetWidth; bk.style.transition = "";
+      b.classList.add("out");
+      requestAnimationFrame(function () {
+        ov.classList.add("on");
+        // fly to the middle, turning to show the cover
+        bk.style.transform = "translate3d(0,0,0) rotateX(8deg) rotateY(-14deg)";
+        later(function () { bk.classList.add("open"); bk.style.transform = "translate3d(" + spreadShift() + "px,0,0) rotateX(12deg) rotateY(0deg)"; }, reduce ? 20 : 950);
+        later(function () { busy = false; ov.querySelector(".bk-close").focus({ preventScroll: true }); }, reduce ? 40 : 2000);
+      });
+    }
+    function close() {
+      if (!current || busy) return;
+      busy = true; clearT();
+      var b = current;
+      bk.classList.remove("open");
+      bk.style.transform = "translate3d(0,0,0) rotateX(8deg) rotateY(-14deg)";
+      later(function () { ov.classList.remove("on"); bk.style.transform = fromShelf(b); }, reduce ? 20 : 900);
+      later(function () { b.classList.remove("out"); ov.hidden = true; current = null; busy = false; b.focus({ preventScroll: true }); }, reduce ? 40 : 1850);
+    }
+    books.forEach(function (b) { b.addEventListener("click", function () { open(b); }); });
+    ov.addEventListener("click", function (e) { if (!e.target.closest(".bk") || e.target.closest(".bk-close")) close(); });
+    bk.addEventListener("click", function (e) { e.stopPropagation(); if (!busy && current) close(); });
     addEventListener("keydown", function (e) { if (e.key === "Escape") close(); });
   })();
 
