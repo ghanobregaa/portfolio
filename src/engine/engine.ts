@@ -203,10 +203,12 @@ export function startEngine(): void {
     if (navigator.clipboard) navigator.clipboard.writeText(email.textContent).then(function () { say("Copied ✓"); burst(copyBtn); }, fallback); else fallback();
   });
 
-  /* ---------- Nav links scramble on hover ---------- */
-  if (!reduce) links.forEach(function (a) {
-    a.dataset.text = a.textContent;
-    a.addEventListener("mouseenter", function () { scramble(a, 10); });
+  /* ---------- Nav links roll on hover ---------- */
+  // each link rolls to a copy of itself on hover (CSS), so the letters never jump around
+  links.forEach(function (a) {
+    var t = a.textContent;
+    a.setAttribute("aria-label", t);
+    a.innerHTML = '<span class="roll" aria-hidden="true"><span>' + t + "</span><span>" + t + "</span></span>";
   });
 
   /* ---------- Status: greeting by Madeira time ---------- */
@@ -246,218 +248,9 @@ export function startEngine(): void {
   /* ---------- Icons draw themselves ---------- */
   document.querySelectorAll(".work-item .ico svg *").forEach(function (el) { el.setAttribute("pathLength", "1"); });
 
-  /* ---------- Contact: weight follows cursor ---------- */
-  var big = document.getElementById("big"), cws = [];
-  big.querySelectorAll(".w").forEach(function (w) {
-    var t = w.textContent; w.textContent = "";
-    Array.from(t).forEach(function (c) { var s = document.createElement("span"); s.className = "cw"; s.textContent = c; w.appendChild(s); cws.push(s); });
-  });
-  if (fine && !reduce) {
-    var contactSec = document.getElementById("contact");
-    contactSec.addEventListener("pointermove", function (e) {
-      cws.forEach(function (s) {
-        var r = s.getBoundingClientRect();
-        var d = Math.hypot(e.clientX - (r.left + r.width / 2), e.clientY - (r.top + r.height / 2));
-        s.style.fontWeight = Math.round(300 + 550 * Math.max(0, 1 - d / 170));
-      });
-    });
-    contactSec.addEventListener("pointerleave", function () { cws.forEach(function (s) { s.style.fontWeight = ""; }); });
-  }
-
-  /* ---------- Easter egg: type "madeira" ---------- */
-  var toast = document.getElementById("toast"), buf = "", boost = 1, eggUntil = 0;
-  var toastTimer = 0;
-  function showToast(t, ms) {
-    toast.textContent = t; toast.classList.add("show");
-    clearTimeout(toastTimer); toastTimer = setTimeout(function () { toast.classList.remove("show"); }, ms || 2800);
-  }
-  function eruption() {
-    eggUntil = performance.now() + 4000;
-    found("madeira", "Volcano mode. Madeira was born from one.");
-    for (var k = 0; k < 4; k++) (function (k) {
-      setTimeout(function () { addRipple(W * (0.3 + Math.random() * 0.5), H * (0.3 + Math.random() * 0.4), 2.4); }, k * 260);
-    })(k);
-    scrollTo({ top: 0, behavior: reduce ? "auto" : "smooth" });
-  }
-  /* ---------- Easter egg hunt ---------- */
-  var EGGS = {
-    madeira: ["Volcano", "Type the name of the island. Anywhere."],
-    konami: ["Arcade", "Old gamers know the code: ↑ ↑ ↓ ↓ ← → ← → B A"],
-    gravity: ["Gravity", "Type the word Newton is famous for."],
-    matrix: ["Matrix", "Type the name of a film about a red pill."],
-    lights: ["Lights out", "Hold the theme button for a while."],
-    console: ["Console", "Developers open the console. Try it."],
-    coords: ["Coordinates", "The coordinates under the globe know where I live. Click them."],
-    roll: ["Barrel roll", "Click the logo five times, fast."],
-    dizzy: ["Dizzy", "Fling the globe as hard as you can."],
-    idle: ["Nap time", "Do nothing for 30 seconds."],
-    sandwich: ["Sandwich", "Ask the terminal, politely, as a superuser, for food."],
-    speed: ["Speed demon", "Beat my ghost in the Type race."],
-    bugs: ["Exterminator", "Squash 25 bugs in a single run of Bug hunt."]
-  };
-  var EGG_TOTAL = Object.keys(EGGS).length, got = {};
-  try { got = JSON.parse(localStorage.getItem("gn-eggs") || "{}") || {}; } catch (e) { got = {}; }
-  var eggBtn = document.getElementById("egg-count"), eggN = document.getElementById("egg-n");
-  function eggCount() { return Object.keys(got).filter(function (k) { return EGGS[k]; }).length; }
-  eggN.textContent = eggCount();
-  function found(id, msg) {
-    var isNew = !got[id];
-    if (isNew) {
-      got[id] = 1;
-      try { localStorage.setItem("gn-eggs", JSON.stringify(got)); } catch (e) { }
-      var n = eggCount();
-      eggN.textContent = n; eggBtn.classList.remove("bump"); void eggBtn.offsetWidth; eggBtn.classList.add("bump");
-      if (n === EGG_TOTAL) { showToast("All " + EGG_TOTAL + " eggs found. You are officially a legend.", 4200); burst(eggBtn); return; }
-      showToast((msg ? msg + "  " : "") + "Egg " + n + "/" + EGG_TOTAL, 3200);
-    } else if (msg) showToast(msg);
-  }
-  eggBtn.addEventListener("click", function () {
-    var left = Object.keys(EGGS).filter(function (k) { return !got[k]; });
-    if (!left.length) { showToast("All found. Nothing left to hide."); burst(eggBtn); return; }
-    showToast("Hint: " + EGGS[left[Math.floor(Math.random() * left.length)]][1], 4200);
-  });
-
-  /* typed words + Konami code */
-  var KONAMI = ["arrowup", "arrowup", "arrowdown", "arrowdown", "arrowleft", "arrowright", "arrowleft", "arrowright", "b", "a"], kPos = 0;
-  addEventListener("keydown", function (e) {
-    if (!e.key) return;
-    var k = e.key.toLowerCase();
-    kPos = k === KONAMI[kPos] ? kPos + 1 : (k === KONAMI[0] ? 1 : 0);
-    if (kPos === KONAMI.length) { kPos = 0; arcade(); }
-    if (k === "escape") { root.classList.remove("crt"); lightsOff(false); }
-    if (k.length === 1) {
-      buf = (buf + k).slice(-12);
-      if (/madeira$/.test(buf)) { buf = ""; eruption(); }
-      else if (/gravity$/.test(buf)) { buf = ""; gravity(); }
-      else if (/matrix$/.test(buf)) { buf = ""; matrix(); }
-    }
-  });
-
-  /* Arcade: CRT scanlines, everything in mono */
-  function arcade() {
-    root.classList.toggle("crt");
-    if (root.classList.contains("crt")) found("konami", "Arcade mode. Press Esc to leave.");
-  }
-
-  /* Gravity: the title falls and bounces, then floats back */
-  var gravityBusy = false;
-  function gravity() {
-    if (gravityBusy) return; gravityBusy = true;
-    scrollTo({ top: 0, behavior: reduce ? "auto" : "smooth" });
-    found("gravity", "Gravity switched on.");
-    var heroRect = document.querySelector(".hero").getBoundingClientRect();
-    document.querySelectorAll("h1 .ch").forEach(function (c) {
-      var r = c.getBoundingClientRect(), drop = heroRect.bottom - r.bottom - 6, rot = (Math.random() - 0.5) * 70;
-      var down = c.animate([
-        { transform: "translateY(0) rotate(0deg)" },
-        { transform: "translateY(" + drop + "px) rotate(" + rot + "deg)", offset: 0.55 },
-        { transform: "translateY(" + (drop - 26) + "px) rotate(" + rot * 0.8 + "deg)", offset: 0.72 },
-        { transform: "translateY(" + drop + "px) rotate(" + rot + "deg)", offset: 0.86 },
-        { transform: "translateY(" + (drop - 6) + "px) rotate(" + rot + "deg)", offset: 0.93 },
-        { transform: "translateY(" + drop + "px) rotate(" + rot + "deg)" }
-      ], { duration: 1100 + Math.random() * 300, delay: Math.random() * 250, easing: "cubic-bezier(.5,0,.75,0)", fill: "forwards" });
-      setTimeout(function () {
-        c.animate([{ transform: "translateY(" + drop + "px) rotate(" + rot + "deg)" }, { transform: "none" }],
-          { duration: 900, delay: Math.random() * 200, easing: "cubic-bezier(.2,.8,.2,1)", fill: "forwards" })
-          .onfinish = function () { down.cancel(); this.cancel(); };
-      }, 3200);
-    });
-    setTimeout(function () { gravityBusy = false; }, 4600);
-  }
-
-  /* Matrix: digital rain over the hero */
-  var matrixBusy = false;
-  function matrix() {
-    if (matrixBusy) return; matrixBusy = true;
-    scrollTo({ top: 0, behavior: reduce ? "auto" : "smooth" });
-    found("matrix", "Wake up. Follow the white rabbit.");
-    var host = document.getElementById("hero-wrap"), cv = document.createElement("canvas");
-    cv.className = "matrix"; host.appendChild(cv);
-    var r = host.getBoundingClientRect(), dp = Math.min(2, window.devicePixelRatio || 1), c = cv.getContext("2d");
-    cv.width = r.width * dp; cv.height = r.height * dp; c.scale(dp, dp);
-    var fs = 13, cols = Math.ceil(r.width / fs), drops = [], chars = "01{}<>/=;gn+*", cs = getComputedStyle(root);
-    var fg = cs.getPropertyValue("--fg").trim(), bg = cs.getPropertyValue("--bg").trim(), ac = cs.getPropertyValue("--accent").trim();
-    for (var i = 0; i < cols; i++) drops[i] = Math.random() * -30;
-    c.font = "500 " + fs + "px " + cs.getPropertyValue("--mono");
-    var start = performance.now(), last = 0;
-    (function rain(ts) {
-      var t = ts - start;
-      if (ts - last > 45) {
-        last = ts;
-        c.globalAlpha = 0.18; c.fillStyle = bg; c.fillRect(0, 0, r.width, r.height);
-        for (var i = 0; i < cols; i++) {
-          var y = drops[i] * fs;
-          c.globalAlpha = 1; c.fillStyle = Math.random() < 0.06 ? ac : fg;
-          c.fillText(chars[Math.floor(Math.random() * chars.length)], i * fs, y);
-          if (y > r.height && Math.random() > 0.96) drops[i] = 0;
-          drops[i] += 1;
-        }
-      }
-      if (t < 6500) requestAnimationFrame(rain);
-      else { cv.classList.add("gone"); setTimeout(function () { cv.remove(); matrixBusy = false; }, 700); }
-    })(start);
-  }
-
-  /* Lights out: hold the theme button, then a flashlight follows you */
-  var lights = document.createElement("div"); lights.className = "lights"; lights.hidden = true; document.body.appendChild(lights);
-  var holdTimer = 0, lightsTimer = 0;
-  window.__noThemeClick = false;
-  function lightsOff(on) {
-    lights.hidden = !on; clearTimeout(lightsTimer);
-    if (on) { found("lights", "Lights out. Click anywhere to switch them back on."); lightsTimer = setTimeout(function () { lightsOff(false); }, 14000); }
-  }
-  themeBtn.addEventListener("pointerdown", function () {
-    themeBtn.classList.add("holding");
-    holdTimer = setTimeout(function () { window.__noThemeClick = true; themeBtn.classList.remove("holding"); lightsOff(true); }, 1200);
-  });
-  ["pointerup", "pointerleave", "pointercancel"].forEach(function (ev) {
-    themeBtn.addEventListener(ev, function () { clearTimeout(holdTimer); themeBtn.classList.remove("holding"); });
-  });
-  addEventListener("pointermove", function (e) {
-    if (lights.hidden) return;
-    lights.style.setProperty("--lx", e.clientX + "px"); lights.style.setProperty("--ly", e.clientY + "px");
-  }, { passive: true });
-  lights.addEventListener("click", function () { lightsOff(false); });
-
-  /* Console: a message for developers */
-  try {
-    console.log("%cgn_", "font: 600 42px Geist, sans-serif; letter-spacing: -2px;");
-    console.log("%cYou opened the console. I like you already.\nType hello() and press Enter.", "font: 13px 'Geist Mono', monospace; color: #888;");
-  } catch (e) { }
-  window.hello = function () {
-    found("console", "Console hacker. Hello to you too.");
-    document.getElementById("contact").scrollIntoView({ behavior: reduce ? "auto" : "smooth" });
-    return "Hello! Thanks for digging around. My links are at the bottom.";
-  };
-
-  /* Coordinates: click to copy */
-  var coords = document.getElementById("coords");
-  coords.addEventListener("click", function () {
-    var txt = "32.65, -16.91";
-    function ok() { found("coords", "Coordinates copied. That is where I write code."); }
-    if (navigator.clipboard) navigator.clipboard.writeText(txt).then(ok, ok); else ok();
-  });
-
-  /* Barrel roll: five fast clicks on the logo */
-  var logoClicks = [], mark = document.querySelector(".mark");
-  function barrelRoll() {
-    found("roll", "Do a barrel roll!");
-    if (!reduce) document.querySelector("main").animate([{ transform: "rotate(0)" }, { transform: "rotate(360deg)" }], { duration: 1200, easing: "cubic-bezier(.6,0,.2,1)" });
-  }
-  mark.addEventListener("click", function () {
-    var now = Date.now(); logoClicks = logoClicks.filter(function (t) { return now - t < 2000; }); logoClicks.push(now);
-    if (logoClicks.length >= 5) { logoClicks = []; barrelRoll(); }
-  });
-
-  /* Nap time: 30 seconds of nothing */
-  var idleTimer = 0, napping = false;
-  function wake() {
-    if (napping) { napping = false; root.classList.remove("napping"); found("idle", "Oh, you're back. I took a quick nap."); }
-    clearTimeout(idleTimer);
-    idleTimer = setTimeout(function () { napping = true; root.classList.add("napping"); }, 30000);
-  }
-  ["pointermove", "pointerdown", "keydown", "scroll", "touchstart", "wheel"].forEach(function (ev) { addEventListener(ev, wake, { passive: true }); });
-  wake();
+  // (easter eggs removed) a couple of hooks elsewhere still call these
+  var eggUntil = 0, boost = 1;
+  function found() {}
 
   /* ---------- Copy burst ---------- */
   function burst(el) {
@@ -665,7 +458,7 @@ export function startEngine(): void {
     }
 
     // ---- the next section (the gallery), copied onto the screen
-    var realTracks = [], copyTracks = [];
+    var realTracks = [], copyTracks = [], liveCv = [];
     function makeCopy() {
       if (!stackSec) return;
       // copy the next section, plus whatever follows it, until a full screen is filled
@@ -678,7 +471,8 @@ export function startEngine(): void {
       }
       // a WebGL scene in the next section hands over a still of its first frame
       var cvs = stackSec.querySelectorAll("canvas"), ccs = c.querySelectorAll("canvas");
-      for (var ci = 0; ci < cvs.length; ci++) if (cvs[ci].__snap) { try { var sc = cvs[ci].__snap(); ccs[ci].width = sc.width; ccs[ci].height = sc.height; ccs[ci].getContext("2d").drawImage(sc, 0, 0); } catch (e) {} }
+      liveCv = [];
+      for (var ci = 0; ci < cvs.length; ci++) if (cvs[ci].__snap) { try { var sc = cvs[ci].__snap(); ccs[ci].width = sc.width; ccs[ci].height = sc.height; ccs[ci].getContext("2d").drawImage(sc, 0, 0); liveCv.push([sc, ccs[ci]]); } catch (e) {} }
       view.innerHTML = ""; view.appendChild(c);
       view.style.width = innerWidth + "px"; view.style.height = innerHeight + "px";
       realTracks = Array.prototype.slice.call(stackSec.querySelectorAll(".track")); copyTracks = Array.prototype.slice.call(c.querySelectorAll(".track"));
@@ -830,6 +624,7 @@ export function startEngine(): void {
     addEventListener("pointermove", function (e) { if (!on) return; tmx = e.clientX / innerWidth - 0.5; tmy = e.clientY / innerHeight - 0.5; }, { passive: true });
     function cl(x) { return Math.max(0, Math.min(1, x)); }
     function ease(x) { x = cl(x); return x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2; }
+    var fr2 = 0;
     function back(x) { x = cl(x); var c1 = 1.5; return 1 + (c1 + 1) * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2); }
     function lerp(a, b, t) { return a + (b - a) * t; }
     var target = new THREE.Vector3(), camPos = new THREE.Vector3(), up = new THREE.Vector3(), C = new THREE.Vector3(), N = new THREE.Vector3(), U = new THREE.Vector3();
@@ -908,6 +703,8 @@ export function startEngine(): void {
       app.classList.toggle("show", showNow); lidOpen = o > 0.9 && ez <= 0;
       app.style.opacity = cl((p - 0.6) / 0.04).toFixed(3); ed.style.opacity = (1 - cl((p - 0.61) / 0.04)).toFixed(3);
       if (showNow) syncTracks();
+      // the gallery keeps moving on the screen (its dust drifts, its lights breathe): copy its live frame
+      if (p > 0.56) liveCv.forEach(function (lc) { try { var g2 = lc[1].getContext("2d"); g2.clearRect(0, 0, lc[1].width, lc[1].height); g2.drawImage(lc[0], 0, 0, lc[1].width, lc[1].height); } catch (e) {} });
       scr.classList.toggle("zoom", ez > 0.01);
       // the copy of the Stack section: whole page, at real size once the screen fills the view
       var bx0 = Math.min(pts[0][0], pts[3][0]), bx1 = Math.max(pts[1][0], pts[2][0]), by0 = Math.min(pts[0][1], pts[1][1]), by1 = Math.max(pts[2][1], pts[3][1]);
@@ -927,22 +724,48 @@ export function startEngine(): void {
         over.style.display = "none";
         view.style.transform = "translate(-50%,-50%) scale(" + Math.min(SW / innerWidth, SH / innerHeight).toFixed(5) + ")";
       }
-      // stacks fly out of the screen and float around the laptop
+      // the cards leave the screen and settle in a tidy layout around the laptop, laid out in screen space so they
+      // never overlap it or each other: two columns on the sides when there is room, rows above and below on phones
       var fade = 1 - cl(ez * 3);
-      chips.forEach(function (c) {
-        var e = cl((n - c.at + 1) / 18), ae = back(e), g = c.tg;
-        tmp2.set(g[0] * (small ? 0.7 : 1), g[1] - 0.55 + Math.sin(t * 1.2 + c.ph) * 0.06, g[2]);
-        laptop.localToWorld(tmp2.add(new THREE.Vector3(0, 0.55, 0)));
-        var pos = C.clone().lerp(tmp2, ae), q = project(pos), dist = camera.position.distanceTo(pos), s = cl(7 / dist) * (0.4 + 0.6 * ae);
+      var navT = (navEl ? Math.max(0, navEl.getBoundingClientRect().bottom - sticky.getBoundingClientRect().top) : 0) + 14;
+      var lw = bx1 - bx0, lL = bx0 - lw * 0.08, lR = bx1 + lw * 0.08, lT = by0, lB = by1 + (by1 - by0) * 0.62;
+      var sc = project(C), cw0 = 0, ch0 = 0;
+      // card sizes are measured again whenever the layout width changes (fonts, rotation, first paint)
+      chips.forEach(function (c) { if (!c.w || c.mw !== W || (fr2 % 120) === 0) { c.w = c.el.offsetWidth; c.h = c.el.offsetHeight; c.mw = W; } cw0 = Math.max(cw0, c.w); ch0 = Math.max(ch0, c.h); });
+      fr2++;
+      var gap = small ? 8 : 18, sideRoom = Math.min(lL, W - lR) - gap * 2, sides = sideRoom >= cw0;
+      var half = Math.ceil(chips.length / 2);
+      chips.forEach(function (c, i) {
+        var e = cl((n - c.at + 1) / 18), ae = back(e), k = i % 2, j = Math.floor(i / 2), tx, ty, cs = 1;
+        if (sides) {
+          // left / right columns, spread along the laptop's height
+          var y0 = Math.max(navT + ch0 / 2, lT - ch0 * 0.4), y1 = Math.min(H - 48 - ch0 / 2, lB + ch0 * 0.2);
+          ty = half > 1 ? y0 + (y1 - y0) * j / (half - 1) : (y0 + y1) / 2;
+          var off = (j % 2 ? 0.35 : 0) * Math.min(sideRoom - cw0, 60); // a gentle zig-zag
+          tx = k ? lR + gap + cw0 / 2 + off : lL - gap - cw0 / 2 - off;
+          tx = Math.max(cw0 / 2 + 12, Math.min(W - cw0 / 2 - 12, tx));
+        } else {
+          // rows above and below the laptop, as many per row as fit
+          // as many per row as fit (shrinking the cards a little rather than dropping to one column)
+          var per = Math.max(1, Math.floor((W - 16 + gap) / (cw0 * 0.8 + gap))), csW = Math.min(1, (W - 16 - (per - 1) * gap) / (per * cw0));
+          var row = Math.floor(j / per), col = j % per, cwS = cw0 * csW;
+          var inRow = Math.min(per, half - row * per), rowW = inRow * cwS + (inRow - 1) * gap;
+          tx = (W - rowW) / 2 + cwS / 2 + col * (cwS + gap);
+          var rows = Math.ceil(half / per);
+          if (k === 0) { var top0 = Math.max(navT, lT - 16 - rows * (ch0 + gap)); ty = top0 + ch0 / 2 + row * (ch0 + gap); }
+          else ty = Math.min(H - 50 - (rows - row) * (ch0 + gap) + ch0 / 2 + gap, lB + 16 + ch0 / 2 + row * (ch0 + gap));
+          var spaceA = lT - 16 - navT, spaceB = H - 50 - lB - 16, need = rows * (ch0 + gap);
+          cs = Math.min(csW, Math.max(0.6, Math.min(1, (k === 0 ? spaceA : spaceB) / need)));
+          ty = k === 0 ? lT - 16 - (rows - row) * (ch0 + gap) * cs + ch0 * cs / 2 : lB + 16 + row * (ch0 + gap) * cs + ch0 * cs / 2;
+        }
+        // smooth the target so the layout glides while the laptop opens and turns
+        if (c.sx === undefined) { c.sx = tx; c.sy = ty; }
+        c.sx += (tx - c.sx) * 0.18; c.sy += (ty - c.sy) * 0.18;
+        var fx = c.sx + Math.sin(t * 0.9 + c.ph) * 3 - mx * 10, fy = c.sy + Math.cos(t * 1.1 + c.ph) * 4 - my * 6;
+        var qx = sc[0] + (fx - sc[0]) * ae, qy = sc[1] + (fy - sc[1]) * ae, sz = cs * (0.35 + 0.65 * Math.min(1, ae));
         c.el.style.visibility = fade > 0.01 && e > 0 ? "visible" : "hidden";
-        c.el.style.opacity = (Math.min(1, e * 3) * fade).toFixed(2);
-        // keep every card inside the view, below the nav and above the caption
-        if (small) s *= 1.3;
-        if (!c.w) { c.w = c.el.offsetWidth; c.h = c.el.offsetHeight; }
-        var hw = c.w * s / 2 + 12, hh = c.h * s / 2 + 10, topB = (navEl ? Math.max(0, navEl.getBoundingClientRect().bottom - sticky.getBoundingClientRect().top) : 0) + hh;
-        var qx = Math.max(hw, Math.min(W - hw, q[0])), qy = Math.max(topB, Math.min(H - 44 - hh, q[1]));
-        qx = q[0] + (qx - q[0]) * ae; qy = q[1] + (qy - q[1]) * ae;
-        c.el.style.transform = "translate(" + qx.toFixed(1) + "px," + qy.toFixed(1) + "px) translate(-50%,-50%) rotate(" + ((1 - e) * 120).toFixed(1) + "deg) scale(" + s.toFixed(3) + ")";
+        c.el.style.opacity = (Math.min(1, e * 2.5) * fade).toFixed(2);
+        c.el.style.transform = "translate(" + qx.toFixed(1) + "px," + qy.toFixed(1) + "px) translate(-50%,-50%) rotate(" + ((1 - Math.min(1, e)) * (k ? 8 : -8)).toFixed(2) + "deg) scale(" + sz.toFixed(3) + ")";
       });
       head.style.transform = "translate3d(" + (mx * -16).toFixed(1) + "px," + (-36 * (1 - hv)).toFixed(1) + "px,0)";
       head.style.opacity = hv.toFixed(3);
@@ -956,345 +779,6 @@ export function startEngine(): void {
     }).catch(function () { cv.style.display = "none"; });
     }
   })();
-
-  /* ---------- Terminal ---------- */
-  var tOut = document.getElementById("term-out"), tIn = document.getElementById("term-input"), tBody = document.getElementById("term-body");
-  var hist = [], hi = 0, queue = Promise.resolve();
-  function esc(s) { return s.replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
-  function line(html) {
-    var d = document.createElement("div"); d.className = "term-line"; d.innerHTML = html; tOut.appendChild(d);
-    tBody.scrollTop = tBody.scrollHeight;
-  }
-  function print(lines, fast) {
-    queue = queue.then(function () {
-      return new Promise(function (res) {
-        var i = 0;
-        (function next() {
-          if (i >= lines.length) { res(); return; }
-          line(lines[i++]);
-          if (fast || reduce) next(); else setTimeout(next, 45);
-        })();
-      });
-    });
-    return queue;
-  }
-  function madeiraTime() {
-    try { return new Intl.DateTimeFormat("en-GB", { weekday: "short", hour: "2-digit", minute: "2-digit", timeZone: "Atlantic/Madeira" }).format(new Date()); } catch (e) { return ""; }
-  }
-  var files = { "about.txt": "about", "experience.log": "experience", "stack.json": "stack", "links.md": "links" };
-  var cmds = {
-    help: function () {
-      return [
-        '<span class="m">available commands</span>',
-        '  <span class="b">whoami</span>      who is this guy',
-        '  <span class="b">about</span>       the short story',
-        '  <span class="b">experience</span>  where I have worked',
-        '  <span class="b">stack</span>       tools I use daily',
-        '  <span class="b">links</span>       where to find me online',
-        '  <span class="b">ls</span> / <span class="b">cat</span>    browse my files',
-        '  <span class="b">time</span>        my local time',
-        '  <span class="b">theme</span>       switch light / dark',
-        '  <span class="b">madeira</span>     you will see',
-        '  <span class="b">clear</span>       clean the screen'
-      ];
-    },
-    whoami: function () { return ["Guilherme Nóbrega", '<span class="m">full-stack developer · ' + age + ' y/o</span>']; },
-    about: function () { return ["I build automations, mobile apps, integrations", "and websites. From idea to production, front to back."]; },
-    experience: function () {
-      return [
-        '<span class="p">2022 → now</span>   Grupo AFA         Flutter, React, Python',
-        '<span class="p">2021 → 2022</span>  Savoy Signature   Flutter apps, React sites, REST APIs'
-      ];
-    },
-    stack: function () {
-      return [
-        '{',
-        '  <span class="p">"web"</span>: ["React", "Next.js", "TypeScript", "Vite", "shadcn/ui"],',
-        '  <span class="p">"mobile"</span>: ["Flutter", "Firebase"],',
-        '  <span class="p">"backend"</span>: ["Python", "Flask", "NestJS"],',
-        '  <span class="p">"automation"</span>: ["Python", "Cron", "APIs"]',
-        '}'
-      ];
-    },
-    links: function () { return ["github     /ghanobregaa", "linkedin   /in/ghanobrega", "instagram  @ghanobrega"]; },
-    ls: function () { return ['<span class="b">about.txt</span>  <span class="b">experience.log</span>  <span class="b">stack.json</span>  <span class="b">links.md</span>  <span class="m">.secret</span>']; },
-    time: function () { return [madeiraTime() + ' <span class="m">· my local time</span>']; },
-    date: function () { return cmds.time(); },
-    theme: function () { themeBtn.click(); return ['<span class="m">theme switched</span>']; },
-    madeira: function () { eruption(); return ['<span class="p">booting volcano...</span> scroll up ↑']; },
-    coffee: function () { return ["   ( (", "    ) )", "  ........", "  |      |]", "  \\      /", "   `----'", '<span class="m">brewing... ready. back to coding.</span>']; },
-    sudo: function () { return ['<span class="m">[sudo] password for guest: ********</span>', 'guest is not in the sudoers file. this incident will be reported.']; },
-    "rm -rf /": function () { return ['<span class="m">not today.</span>']; },
-    exit: function () { return ['<span class="m">there is no escape. try</span> <span class="b">help</span>']; },
-    history: function () { return hist.length ? hist.map(function (h, i) { return '<span class="m">' + (i + 1) + '</span>  ' + esc(h); }) : ['<span class="m">empty</span>']; },
-    clear: function () { tOut.innerHTML = ""; return []; }
-  };
-  function run(raw) {
-    var input = raw.trim();
-    line('<span class="p">~ $</span> ' + esc(input));
-    if (!input) return;
-    hist.push(input); hi = hist.length;
-    var key = input.toLowerCase().replace(/\s+/g, " ");
-    var out;
-    if (cmds[key]) out = cmds[key]();
-    else if (key.indexOf("cat ") === 0) {
-      var f = key.slice(4);
-      if (f === ".secret") out = ['<span class="p">you found it.</span> type <span class="b">madeira</span> anywhere on the page.'];
-      else if (files[f]) out = cmds[files[f]]();
-      else out = ['cat: ' + esc(f) + ': no such file'];
-    } else if (key.indexOf("echo ") === 0) out = [esc(input.slice(5))];
-    else if (key.indexOf("sudo ") === 0) out = cmds.sudo();
-    else out = ['command not found: ' + esc(input.split(" ")[0]) + ' <span class="m">· try</span> <span class="b">help</span>'];
-    print(out);
-  }
-  print([
-    '<span class="m">gn-shell 1.0 · ' + madeiraTime() + '</span>',
-    'Welcome. Type <span class="b">help</span> to see what I can do.'
-  ], true);
-  print(cmds.help(), true);
-  tIn.addEventListener("keydown", function (e) {
-    if (e.key === "Enter") { run(tIn.value); tIn.value = ""; }
-    else if (e.key === "ArrowUp") { if (hi > 0) { hi--; tIn.value = hist[hi]; } e.preventDefault(); }
-    else if (e.key === "ArrowDown") { if (hi < hist.length - 1) { hi++; tIn.value = hist[hi]; } else { hi = hist.length; tIn.value = ""; } e.preventDefault(); }
-    else if (e.key === "Tab") {
-      e.preventDefault();
-      var v = tIn.value.toLowerCase();
-      var pool = Object.keys(cmds).concat(Object.keys(files).map(function (f) { return "cat " + f; }));
-      var m = pool.filter(function (c) { return v && c.indexOf(v) === 0; });
-      if (m.length === 1) tIn.value = m[0];
-      else if (m.length > 1) line('<span class="m">' + m.join("  ") + '</span>');
-    }
-    e.stopPropagation();
-  });
-  tIn.addEventListener("keyup", function (e) { e.stopPropagation(); });
-  tBody.addEventListener("click", function () { if (!getSelection().toString()) tIn.focus({ preventScroll: true }); });
-  document.querySelectorAll("#term-chips button").forEach(function (b) {
-    b.addEventListener("click", function () { run(b.dataset.cmd); });
-  });
-
-  /* ---------- Terminal: hidden commands ---------- */
-  cmds.eggs = function () {
-    var out = ['<span class="m">easter eggs found: ' + eggCount() + '/' + EGG_TOTAL + '</span>'];
-    Object.keys(EGGS).forEach(function (k) { out.push(got[k] ? '  <span class="p">●</span> ' + EGGS[k][0] : '  <span class="m">○ ???</span>'); });
-    return out;
-  };
-  cmds.gravity = function () { gravity(); return ['<span class="m">what goes up...</span>']; };
-  cmds.matrix = function () { matrix(); return ['<span class="m">there is no spoon.</span>']; };
-  cmds["do a barrel roll"] = cmds["barrel roll"] = function () { barrelRoll(); return ['<span class="m">wheee.</span>']; };
-  cmds.konami = function () { return ['<span class="m">↑ ↑ ↓ ↓ ← → ← → B A. not here though, on the page.</span>']; };
-  cmds["make sandwich"] = cmds["make me a sandwich"] = function () { return ["What? Make it yourself."]; };
-  cmds["sudo make sandwich"] = cmds["sudo make me a sandwich"] = function () { found("sandwich", "Okay. One sandwich, coming up."); return ['<span class="p">Okay.</span>']; };
-  cmds.ping = function () { return ["pong"]; };
-  cmds.vim = function () { return ['<span class="m">you are now trapped. just kidding:</span> :q!']; };
-  cmds["42"] = function () { return ["The answer. But what was the question?"]; };
-  cmds.hello = cmds.hi = function () { return ["Hi! Nice of you to say hello."]; };
-  cmds["hello()"] = function () { window.hello(); return ['<span class="p">hello!</span> scrolling to my links...']; };
-
-  /* ---------- Easter egg total ---------- */
-  document.getElementById("egg-t").textContent = EGG_TOTAL;
-
-  /* ---------- Type race vs my ghost ---------- */
-  var SNIPPETS = [
-    "const app = createApp({ fast: true, simple: true });",
-    "await fetch('/api/ideas').then((res) => res.json());",
-    "if (idea.isGood) { build(idea); ship(idea); }",
-    "git commit -m \"make it simple, then make it fast\"",
-    "for (const step of workflow) await step.run();",
-    "export default function Hello() { return <h1>Hi</h1>; }"
-  ];
-  var raceText = document.getElementById("race-text"), raceIn = document.getElementById("race-input"), raceBox = document.getElementById("race-box");
-  var rYou = document.getElementById("r-you"), rTime = document.getElementById("r-time"), raceMsg = document.getElementById("race-msg");
-  var runYou = document.getElementById("run-you"), runGhost = document.getElementById("run-ghost"), raceEl = document.querySelector(".race");
-  var GHOST_WPM = 35, ghostCps = GHOST_WPM * 5 / 60, snippet = "", spans = [], raceT0 = 0, raceOn = false, raceDone = false, ghostDoneAt = 0, si = -1;
-  function norm(t) { return t.replace(/[‘’]/g, "'").replace(/[“”]/g, '"'); }
-  function newRace() {
-    si = (si + 1 + Math.floor(Math.random() * (SNIPPETS.length - 1))) % SNIPPETS.length;
-    snippet = SNIPPETS[si]; raceText.innerHTML = "";
-    spans = Array.from(snippet).map(function (ch) { var sp = document.createElement("span"); sp.className = "c"; sp.textContent = ch; raceText.appendChild(sp); return sp; });
-    spans[0].classList.add("cur", "gh");
-    raceIn.value = ""; raceOn = false; raceDone = false; ghostDoneAt = 0;
-    rYou.textContent = "0"; rTime.textContent = "0.0"; runYou.style.left = "0%"; runGhost.style.left = "0%";
-    raceEl.classList.remove("done");
-    raceMsg.innerHTML = "Click the snippet and start typing. My ghost starts when you do.";
-  }
-  function paint() {
-    var v = norm(raceIn.value).slice(0, snippet.length), correct = 0;
-    spans.forEach(function (sp, i) {
-      sp.classList.remove("ok", "bad", "cur");
-      if (i < v.length) { if (v[i] === snippet[i]) { sp.classList.add("ok"); correct++; } else sp.classList.add("bad"); }
-    });
-    if (v.length < spans.length) spans[v.length].classList.add("cur");
-    runYou.style.left = (v.length / snippet.length * 100) + "%";
-    return { typed: v.length, correct: correct, v: v };
-  }
-  function raceLoop() {
-    if (!raceOn) return;
-    var t = (performance.now() - raceT0) / 1000;
-    rTime.textContent = t.toFixed(1);
-    var g = Math.min(snippet.length, Math.floor(t * ghostCps));
-    spans.forEach(function (sp, i) { sp.classList.toggle("gh", i === g && g < snippet.length); });
-    runGhost.style.left = (g / snippet.length * 100) + "%";
-    if (g >= snippet.length && !ghostDoneAt) ghostDoneAt = t;
-    var p = paint(); if (t > 0.3) rYou.textContent = Math.round((p.correct / 5) / (t / 60));
-    requestAnimationFrame(raceLoop);
-  }
-  raceIn.addEventListener("input", function () {
-    if (raceDone) { raceIn.value = snippet; return; }
-    if (!raceOn && raceIn.value.length) { raceOn = true; raceT0 = performance.now(); raceMsg.innerHTML = "Go go go."; requestAnimationFrame(raceLoop); }
-    var p = paint();
-    if (p.typed >= snippet.length) {
-      raceOn = false; raceDone = true; raceEl.classList.add("done");
-      var t = (performance.now() - raceT0) / 1000, wpm = Math.round((p.correct / 5) / (t / 60)), acc = Math.round(p.correct / snippet.length * 100);
-      rYou.textContent = wpm; rTime.textContent = t.toFixed(1);
-      var ghostT = snippet.length / ghostCps;
-      if (t < ghostT && acc >= 90) {
-        raceMsg.innerHTML = "<b>You beat my ghost</b> by " + (ghostT - t).toFixed(1) + "s. " + wpm + " wpm, " + acc + "% accuracy. Respect.";
-        found("speed", "Speed demon. You out-typed me."); burst(raceBox);
-      } else if (t < ghostT) {
-        raceMsg.innerHTML = "Faster than me, but " + acc + "% accuracy. Ghost says it doesn't count.";
-      } else {
-        raceMsg.innerHTML = "<b>" + wpm + " wpm</b>, " + acc + "% accuracy. My ghost won by " + (t - ghostT).toFixed(1) + "s. Rematch?";
-      }
-    }
-  });
-  raceIn.addEventListener("focus", function () { raceBox.classList.add("focus"); });
-  raceIn.addEventListener("blur", function () { raceBox.classList.remove("focus"); });
-  raceIn.addEventListener("keydown", function (e) { e.stopPropagation(); if (e.key === "Enter" && raceDone) newRace(); });
-  raceIn.addEventListener("keyup", function (e) { e.stopPropagation(); });
-  document.getElementById("race-new").addEventListener("click", function () { newRace(); raceIn.focus({ preventScroll: true }); });
-  newRace();
-
-  /* ---------- Your visit, live: area gradient line charts ---------- */
-  var vMain = document.getElementById("v-main"), vTip = document.getElementById("v-tip");
-  var vNowEl = document.getElementById("v-now"), vPeakEl = document.getElementById("v-peak"), vTimeEl = document.getElementById("v-time");
-  var vcScroll = document.getElementById("vc-scroll"), vcClicks = document.getElementById("vc-clicks"), vcKeys = document.getElementById("vc-keys");
-  var NS = 240, SAMPLE = 250, act = [], sScroll = [], sClicks = [], sKeys = [];
-  for (var vi = 0; vi < NS; vi++) act.push(0);
-  for (vi = 0; vi < 60; vi++) { sScroll.push(0); sClicks.push(0); sKeys.push(0); }
-  var moved = 0, vpx = null, vpy = null, lastSY = scrollY, nClicks = 0, nKeys = 0, peak = 0, vT0 = Date.now(), lastSample = performance.now(), tick4 = 0;
-  var vMax = 200, hoverX = null, vVisible = true, vCol = {};
-  addEventListener("pointermove", function (e) {
-    if (vpx !== null) moved += Math.hypot(e.clientX - vpx, e.clientY - vpy);
-    vpx = e.clientX; vpy = e.clientY;
-  }, { passive: true });
-  addEventListener("pointerdown", function () { nClicks++; }, true);
-  addEventListener("keydown", function () { nKeys++; }, true);
-  function depth() { var m = document.documentElement.scrollHeight - innerHeight; return m > 0 ? Math.round(scrollY / m * 100) : 0; }
-  setInterval(function () {
-    var dy = Math.abs(scrollY - lastSY); lastSY = scrollY;
-    var v = (moved + dy) / (SAMPLE / 1000); moved = 0;
-    act.push(v); act.shift(); lastSample = performance.now();
-    var smooth = (act[NS - 1] + act[NS - 2] + act[NS - 3]) / 3;
-    vNowEl.textContent = Math.round(smooth);
-    if (smooth > peak) { peak = smooth; vPeakEl.textContent = Math.round(peak); }
-    if (++tick4 % 4 === 0) {
-      sScroll.push(depth()); sScroll.shift(); sClicks.push(nClicks); sClicks.shift(); sKeys.push(nKeys); sKeys.shift();
-      vcScroll.textContent = depth() + "%"; vcClicks.textContent = nClicks; vcKeys.textContent = nKeys;
-      var sec = Math.floor((Date.now() - vT0) / 1000);
-      vTimeEl.textContent = Math.floor(sec / 60) + ":" + String(sec % 60).padStart(2, "0");
-      drawSparks();
-    }
-  }, SAMPLE);
-
-  function hexA(hex, a) {
-    var h = hex.replace("#", "");
-    if (h.length === 3) h = h.split("").map(function (c) { return c + c; }).join("");
-    var n = parseInt(h, 16);
-    if (isNaN(n)) return "rgba(247,168,169," + a + ")";
-    return "rgba(" + (n >> 16 & 255) + "," + (n >> 8 & 255) + "," + (n & 255) + "," + a + ")";
-  }
-  function readV() {
-    var c = getComputedStyle(root);
-    vCol = {
-      fg: c.getPropertyValue("--fg").trim(), muted: c.getPropertyValue("--muted").trim(), line: c.getPropertyValue("--line").trim(),
-      ac: c.getPropertyValue("--accent").trim(), mono: c.getPropertyValue("--mono")
-    };
-  }
-  readV();
-  function niceCeil(v) {
-    var p = Math.pow(10, Math.floor(Math.log10(Math.max(v, 1)))), m = v / p;
-    return (m <= 1 ? 1 : m <= 2 ? 2 : m <= 5 ? 5 : 10) * p;
-  }
-  function fitCanvas(cv) {
-    var dpr = Math.min(2, window.devicePixelRatio || 1), w = cv.clientWidth, h = cv.clientHeight;
-    if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) { cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); }
-    var c = cv.getContext("2d"); c.setTransform(dpr, 0, 0, dpr, 0, 0); return { c: c, w: w, h: h };
-  }
-  function smoothPath(c, pts) {
-    c.moveTo(pts[0][0], pts[0][1]);
-    for (var i = 1; i < pts.length - 1; i++) {
-      var mx = (pts[i][0] + pts[i + 1][0]) / 2, my = (pts[i][1] + pts[i + 1][1]) / 2;
-      c.quadraticCurveTo(pts[i][0], pts[i][1], mx, my);
-    }
-    var l = pts[pts.length - 1]; c.lineTo(l[0], l[1]);
-  }
-  function areaChart(c, pts, top, bottom, alpha) {
-    var g = c.createLinearGradient(0, top, 0, bottom);
-    g.addColorStop(0, hexA(vCol.ac, alpha)); g.addColorStop(1, hexA(vCol.ac, 0));
-    c.beginPath(); smoothPath(c, pts); c.lineTo(pts[pts.length - 1][0], bottom); c.lineTo(pts[0][0], bottom); c.closePath();
-    c.fillStyle = g; c.fill();
-    c.beginPath(); smoothPath(c, pts); c.strokeStyle = vCol.fg; c.lineWidth = 1.5; c.lineJoin = "round"; c.stroke();
-  }
-  function drawMain(now) {
-    var f = fitCanvas(vMain), c = f.c, w = f.w, h = f.h, padR = 40, top = 14, bot = h - 18, pw = w - padR;
-    var target = niceCeil(Math.max.apply(null, act) * 1.15);
-    target = Math.max(target, 200); vMax += (target - vMax) * 0.08;
-    c.clearRect(0, 0, w, h);
-    c.font = "10px " + vCol.mono; c.textBaseline = "middle"; c.fillStyle = vCol.muted;
-    for (var gI = 0; gI <= 2; gI++) {
-      var gy = top + (bot - top) * gI / 2, val = Math.round(vMax * (1 - gI / 2));
-      c.strokeStyle = vCol.line; c.lineWidth = 1; c.setLineDash(gI === 2 ? [] : [3, 4]);
-      c.beginPath(); c.moveTo(0, gy); c.lineTo(pw, gy); c.stroke(); c.setLineDash([]);
-      c.fillText(val >= 1000 ? (val / 1000).toFixed(val >= 10000 ? 0 : 1) + "k" : val, pw + 8, gy);
-    }
-    c.fillText("now", pw + 8, bot + 11 > h ? h - 4 : bot + 11);
-    var step = pw / (NS - 2), phase = reduce ? 0 : Math.min(1, (now - lastSample) / SAMPLE), pts = [];
-    for (var i = 0; i < NS; i++) {
-      var x = (i - phase) * step, y = top + (1 - Math.min(act[i], vMax) / vMax) * (bot - top);
-      pts.push([x, y]);
-    }
-    c.save(); c.beginPath(); c.rect(0, 0, pw, h); c.clip();
-    areaChart(c, pts, top, bot, 0.55);
-    var last = pts[NS - 1], lx = Math.min(last[0], pw - 1);
-    c.restore();
-    if (!reduce) {
-      var ph = (now % 1600) / 1600;
-      c.globalAlpha = 1 - ph; c.strokeStyle = vCol.ac; c.lineWidth = 1;
-      c.beginPath(); c.arc(lx, last[1], 3 + ph * 10, 0, Math.PI * 2); c.stroke(); c.globalAlpha = 1;
-    }
-    c.fillStyle = vCol.fg; c.beginPath(); c.arc(lx, last[1], 3, 0, Math.PI * 2); c.fill();
-    if (hoverX !== null && hoverX < pw) {
-      var idx = Math.max(0, Math.min(NS - 1, Math.round(hoverX / step + phase))), p = pts[idx];
-      c.strokeStyle = vCol.muted; c.setLineDash([2, 3]); c.beginPath(); c.moveTo(p[0], top); c.lineTo(p[0], bot); c.stroke(); c.setLineDash([]);
-      c.fillStyle = vCol.bg || vCol.fg; c.beginPath(); c.arc(p[0], p[1], 4, 0, Math.PI * 2); c.fillStyle = vCol.fg; c.fill();
-      var ago = ((NS - 1 - idx) * SAMPLE / 1000).toFixed(1);
-      vTip.hidden = false; vTip.textContent = Math.round(act[idx]) + " px/s · " + (ago === "0.0" ? "now" : ago + "s ago");
-      vTip.style.left = Math.max(60, Math.min(w - 60, p[0])) + "px";
-    } else vTip.hidden = true;
-  }
-  var sparkCanvases = document.querySelectorAll("[data-spark]");
-  function drawSparks() {
-    sparkCanvases.forEach(function (cv) {
-      var key = cv.dataset.spark, data = key === "scroll" ? sScroll : key === "clicks" ? sClicks : sKeys;
-      var f = fitCanvas(cv), c = f.c, w = f.w, h = f.h, top = 4, bot = h - 2;
-      var mx = key === "scroll" ? 100 : Math.max(5, Math.max.apply(null, data) * 1.2);
-      var pts = data.map(function (v, i) { return [i / (data.length - 1) * w, top + (1 - v / mx) * (bot - top)]; });
-      c.clearRect(0, 0, w, h);
-      areaChart(c, pts, top, bot, 0.45);
-      var l = pts[pts.length - 1]; c.fillStyle = vCol.fg; c.beginPath(); c.arc(l[0] - 2, l[1], 2.2, 0, Math.PI * 2); c.fill();
-    });
-  }
-  vMain.addEventListener("pointermove", function (e) { var r = vMain.getBoundingClientRect(); hoverX = e.clientX - r.left; });
-  vMain.addEventListener("pointerleave", function () { hoverX = null; });
-  if ("IntersectionObserver" in window) new IntersectionObserver(function (e) { vVisible = e[0].isIntersecting; }).observe(vMain);
-  var vFrames = 0;
-  (function vLoop(ts) {
-    if (vVisible) { if (++vFrames % 60 === 0) readV(); drawMain(ts); }
-    requestAnimationFrame(vLoop);
-  })(performance.now());
-  drawSparks();
-  addEventListener("resize", drawSparks);
-  themeBtn.addEventListener("click", function () { setTimeout(function () { readV(); drawSparks(); }, 60); });
 
   /* ---------- Experience as git log ---------- */
   var gitlog = document.getElementById("gitlog"), tl = document.getElementById("timeline"), gitTimers = [];
@@ -1752,75 +1236,39 @@ export function startEngine(): void {
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(fit);
   })();
 
-  /* ---------- Contact: pink dots fall and pile up (Strike-style) ---------- */
+  /* ---------- Elsewhere: three big doors; the hovered one shows a preview that floats with the cursor ---------- */
   (function () {
-    var card = document.getElementById("sand-card"), cv = document.getElementById("sand"), c = cv.getContext("2d");
-    var CELL = 5, cols = 0, rows = 0, grid = null, W = 0, H = 0, dpr = 1, on = false, ac = "#f7a8a9", spawnRate = 4.5, filling = true, fade = 1;
-    function readAc() { ac = getComputedStyle(root).getPropertyValue("--accent").trim() || ac; }
-    function size() {
-      dpr = Math.min(2, window.devicePixelRatio || 1); W = card.clientWidth; H = card.clientHeight;
-      cv.width = W * dpr; cv.height = H * dpr; c.setTransform(dpr, 0, 0, dpr, 0, 0);
-      cols = Math.floor(W / CELL); rows = Math.floor(H / CELL); grid = new Uint8Array(cols * rows);
+    var peek = document.getElementById("ct-peek"), grid = document.getElementById("pk-grid");
+    var rows = Array.prototype.slice.call(document.querySelectorAll(".ct-row"));
+    if (!peek || !rows.length) return;
+    // a GitHub-style contribution grid, the same every visit
+    var seed = 7; function rnd() { seed = (seed * 16807) % 2147483647; return seed / 2147483647; }
+    for (var i = 0; i < 7 * 24; i++) { var c = document.createElement("i"), r0 = rnd(), col = Math.floor(i / 7); c.dataset.l = r0 < 0.28 ? 0 : r0 < 0.55 ? 1 : r0 < 0.78 ? 2 : r0 < 0.93 ? 3 : 4; if (col > 18 && r0 > 0.3) c.dataset.l = Math.min(4, +c.dataset.l + 1); c.style.setProperty("--i", i); grid.appendChild(c); }
+    // each name rolls letter by letter
+    rows.forEach(function (a) {
+      var nm = a.querySelector(".ct-name"), t = nm.dataset.t; nm.textContent = ""; nm.setAttribute("aria-label", t);
+      Array.from(t).forEach(function (ch, k) {
+        var s = document.createElement("span"); s.className = "ct-ch"; s.style.setProperty("--k", k); s.setAttribute("aria-hidden", "true");
+        s.innerHTML = "<span>" + ch + "</span><span>" + ch + "</span>"; nm.appendChild(s);
+      });
+    });
+    if (!fine) return;
+    var tx = 0, ty = 0, x = 0, y = 0, vx = 0, shown = false, raf = 0;
+    function loop() {
+      var px = x; x += (tx - x) * 0.16; y += (ty - y) * 0.16; vx += ((x - px) - vx) * 0.3;
+      peek.style.transform = "translate3d(" + x.toFixed(1) + "px," + y.toFixed(1) + "px,0) translate(-50%,-50%) rotate(" + Math.max(-12, Math.min(12, vx * 0.9)).toFixed(2) + "deg)";
+      raf = shown || Math.abs(tx - x) > 0.5 ? requestAnimationFrame(loop) : 0;
     }
-    size(); readAc(); addEventListener("resize", size);
-    function drop(x, n) {
-      for (var k = 0; k < n; k++) {
-        var cI = Math.max(0, Math.min(cols - 1, Math.round(x / CELL + (Math.random() - 0.5) * 6)));
-        var rI = Math.floor(Math.random() * 3);
-        if (!grid[rI * cols + cI]) grid[rI * cols + cI] = 1 + Math.floor(Math.random() * 3);
-      }
-    }
-    cv.addEventListener("pointerdown", function (e) { var r = cv.getBoundingClientRect(); drop(e.clientX - r.left, 40); });
-    function step() {
-      for (var r = rows - 2; r >= 0; r--) {
-        var dir = Math.random() < 0.5 ? 1 : -1;
-        for (var i = 0; i < cols; i++) {
-          var cI = dir > 0 ? i : cols - 1 - i, idx = r * cols + cI, v = grid[idx];
-          if (!v) continue;
-          var below = idx + cols;
-          if (!grid[below]) { grid[below] = v; grid[idx] = 0; continue; }
-          var d = Math.random() < 0.5 ? -1 : 1, c1 = cI + d, c2 = cI - d;
-          if (c1 >= 0 && c1 < cols && !grid[below + d]) { grid[below + d] = v; grid[idx] = 0; }
-          else if (c2 >= 0 && c2 < cols && !grid[below - d]) { grid[below - d] = v; grid[idx] = 0; }
-        }
-      }
-    }
-    function pileHeight() {
-      for (var r = 0; r < rows; r++) { var n = 0; for (var i = 0; i < cols; i++) if (grid[r * cols + i]) n++; if (n > cols * 0.5) return rows - r; }
-      return 0;
-    }
-    function draw() {
-      c.clearRect(0, 0, W, H);
-      c.fillStyle = ac;
-      for (var r = 0; r < rows; r++) for (var i = 0; i < cols; i++) {
-        var v = grid[r * cols + i]; if (!v) continue;
-        c.globalAlpha = fade * (v === 1 ? 1 : v === 2 ? 0.75 : 0.5);
-        c.beginPath(); c.arc(i * CELL + CELL / 2, r * CELL + CELL / 2, CELL * 0.36, 0, 6.283); c.fill();
-      }
-      c.globalAlpha = 1;
-    }
-    if ("IntersectionObserver" in window) new IntersectionObserver(function (e) { on = e[0].isIntersecting; }).observe(card);
-    var last = 0, fr = 0;
-    (function loop(ts) {
-      if (on && !reduce && ts - last > 33) {
-        last = ts;
-        if (++fr % 90 === 0) readAc();
-        if (filling) {
-          for (var k = 0; k < spawnRate; k++) if (Math.random() < 0.9) { var cI = Math.floor(Math.random() * cols); if (!grid[cI]) grid[cI] = 1 + Math.floor(Math.random() * 3); }
-          if (pileHeight() > Math.min(rows * 0.3, 150 / CELL)) filling = false;
-        } else {
-          fade -= 0.02;
-          if (fade <= 0) { grid.fill(0); fade = 1; filling = true; }
-        }
-        step(); draw();
-      }
-      requestAnimationFrame(loop);
-    })(0);
-    if (reduce) {
-      for (var r = rows - 6; r < rows; r++) for (var i = 0; i < cols; i++) if (Math.random() < 0.8) grid[r * cols + i] = 1;
-      draw();
-    }
-    themeBtn.addEventListener("click", function () { setTimeout(readAc, 80); });
+    rows.forEach(function (a) {
+      a.addEventListener("pointerenter", function (e) {
+        if (!shown) { x = tx = e.clientX; y = ty = e.clientY; }
+        shown = true; peek.dataset.k = a.dataset.k; peek.classList.add("on");
+        if (!raf) raf = requestAnimationFrame(loop);
+      });
+      a.addEventListener("pointermove", function (e) { tx = e.clientX; ty = e.clientY; });
+      a.addEventListener("pointerleave", function () { shown = false; peek.classList.remove("on"); });
+    });
+    addEventListener("scroll", function () { if (shown) { shown = false; peek.classList.remove("on"); } }, { passive: true });
   })();
 
   /* ---------- Glitch effect ---------- */
@@ -1836,7 +1284,6 @@ export function startEngine(): void {
 
   /* glitch the footer "gn" when it is on screen, and on hover */
   var giantEl = document.getElementById("giant");
-  giantEl.addEventListener("mouseenter", function () { glitch(giantEl); });
   (function loopGiant() {
     setTimeout(function () {
       var r = giantEl.getBoundingClientRect(), cur = document.getElementById("curtain");
@@ -1844,160 +1291,6 @@ export function startEngine(): void {
       loopGiant();
     }, 3000 + Math.random() * 3500);
   })();
-
-  /* ---------- Bug hunt mini game ---------- */
-  (function () {
-    var stage = document.getElementById("game-stage"), cv = document.getElementById("game-cv"), c = cv.getContext("2d");
-    var overlay = document.getElementById("game-overlay"), goTitle = document.getElementById("go-title"), goSub = document.getElementById("go-sub");
-    var startBtn = document.getElementById("game-start"), scoreEl = document.getElementById("g-score"), comboEl = document.getElementById("g-combo");
-    var bestEl = document.getElementById("g-best"), lifeEls = document.querySelectorAll("#g-lives i");
-    var W = 0, H = 0, dpr = 1, PROD = 52, GUTTER = 34, LH = 22, TOP = 16;
-    var best = 0; try { best = +localStorage.getItem("gn-bugs-best") || 0; } catch (e) { }
-    bestEl.textContent = best;
-    var BUG = ["..x.x..", "...x...", ".xxxxx.", "xxxxxxx", ".xxxxx.", "xxxxxxx", ".x...x."];
-    var BUG2 = ["..x.x..", "...x...", ".xxxxx.", "xxxxxxx", ".xxxxx.", "xxxxxxx", "x.....x"];
-    var CODE = ["import { ship } from './deploy';", "", "export async function release(app) {", "  const build = await compile(app);",
-      "  if (!build.ok) throw new Error('nope');", "  await tests.run({ watch: false });", "  return ship(build, { env: 'prod' });", "}",
-      "", "// TODO: fix this before friday", "const retries = 3;", "for (let i = 0; i < retries; i++) await ping();", "export default release;"];
-    var col = {}, bugs = [], parts = [], floats = [], running = false, score = 0, lives = 3, combo = 1, lastHit = 0, t = 0, spawnT = 0, last = 0, flash = 0, visible = true;
-    function colors() { var s2 = getComputedStyle(root); col.fg = s2.getPropertyValue("--fg").trim(); col.mu = s2.getPropertyValue("--muted").trim(); col.ln = s2.getPropertyValue("--line").trim(); col.ac = s2.getPropertyValue("--accent").trim(); col.mono = s2.getPropertyValue("--mono"); }
-    function size() { dpr = Math.min(2, window.devicePixelRatio || 1); W = stage.clientWidth; H = stage.clientHeight; cv.width = W * dpr; cv.height = H * dpr; c.setTransform(dpr, 0, 0, dpr, 0, 0); }
-    colors(); size(); addEventListener("resize", size);
-    themeBtn.addEventListener("click", function () { setTimeout(colors, 80); });
-    function lanes() { return Math.max(4, Math.floor((H - TOP * 2) / LH)); }
-    function pop(el, v) { el.textContent = v; el.classList.remove("pop"); void el.offsetWidth; el.classList.add("pop"); }
-    function setLives() { lifeEls.forEach(function (e, i) { e.classList.toggle("off", i >= lives); }); }
-    function spawn() {
-      var lane = Math.floor(Math.random() * lanes()), y = TOP + lane * LH + LH / 2, diff = Math.min(1, t / 70);
-      var r = Math.random(), kind = r < 0.12 ? "crit" : (r < 0.24 && t > 6 ? "feat" : "bug");
-      var speed = (42 + diff * 95) * (kind === "crit" ? 1.6 : kind === "feat" ? 0.9 : 1) * (0.85 + Math.random() * 0.3);
-      bugs.push({ x: GUTTER - 10, y: y, vy: 0, kind: kind, speed: speed, ph: Math.random() * 6, wob: Math.random() * 6 });
-    }
-    function burst(x, y, color, n) {
-      for (var i = 0; i < n; i++) { var a = Math.random() * 6.283, v = 40 + Math.random() * 160; parts.push({ x: x, y: y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 1, color: color }); }
-    }
-    function floatText(x, y, txt, color) { floats.push({ x: x, y: y, txt: txt, life: 1, color: color }); }
-    function start() {
-      bugs = []; parts = []; floats = []; score = 0; lives = 3; combo = 1; t = 0; spawnT = 0.4; flash = 0;
-      scoreEl.textContent = "0"; comboEl.textContent = "x1"; setLives();
-      overlay.hidden = true; running = true; last = performance.now();
-    }
-    function gameOver() {
-      running = false;
-      if (score > best) { best = score; try { localStorage.setItem("gn-bugs-best", best); } catch (e) { } pop(bestEl, best); }
-      goTitle.textContent = score >= 25 ? "Prod went down, but what a run." : "Prod is down.";
-      goTitle.dataset.text = goTitle.textContent;
-      setTimeout(function () { glitch(goTitle); }, 80); setTimeout(function () { glitch(goTitle); }, 900);
-      goSub.innerHTML = "You squashed <b style=\"color:var(--fg)\">" + score + "</b> bugs in " + t.toFixed(0) + "s. Best: " + best + ".";
-      startBtn.textContent = "Hotfix and retry";
-      overlay.hidden = false;
-    }
-    startBtn.addEventListener("click", start);
-    addEventListener("keydown", function (e) {
-      if ((e.key === " " || e.key === "Enter") && !running && document.activeElement === startBtn) return;
-    });
-    cv.addEventListener("pointerdown", function (e) {
-      if (!running) return;
-      var r = cv.getBoundingClientRect(), px = e.clientX - r.left, py = e.clientY - r.top, hitR = e.pointerType === "mouse" ? 16 : 24, hit = -1, bestD = 1e9;
-      bugs.forEach(function (b, i) { var d = Math.hypot(b.x - px, b.y - py); if (d < hitR && d < bestD) { bestD = d; hit = i; } });
-      if (hit < 0) { burst(px, py, col.mu, 4); return; }
-      var b = bugs.splice(hit, 1)[0];
-      if (b.kind === "feat") {
-        combo = 1; score = Math.max(0, score - 3); pop(scoreEl, score); comboEl.textContent = "x1";
-        floatText(b.x, b.y - 10, "-3 that was a feature", col.mu); burst(b.x, b.y, col.mu, 10); return;
-      }
-      combo = (t - lastHit < 1.3) ? Math.min(5, combo + 1) : 1; lastHit = t;
-      var pts = (b.kind === "crit" ? 5 : 1) * combo;
-      score += pts; pop(scoreEl, score); comboEl.textContent = "x" + combo;
-      floatText(b.x, b.y - 12, "+" + pts, b.kind === "crit" ? col.ac : col.fg);
-      burst(b.x, b.y, col.ac, b.kind === "crit" ? 26 : 14);
-      if (score >= 25) found("bugs", "Exterminator. Prod thanks you.");
-    });
-    function drawSprite(x, y, rows, color, scale) {
-      c.fillStyle = color;
-      for (var r = 0; r < rows.length; r++) for (var k = 0; k < rows[r].length; k++) {
-        if (rows[r][k] !== "x") continue;
-        c.beginPath(); c.arc(x + (k - 3) * scale, y + (r - 3) * scale, scale * 0.42, 0, 6.283); c.fill();
-      }
-    }
-    function drawBoard() {
-      c.font = "300 11.5px " + col.mono; c.textBaseline = "middle";
-      var n = lanes();
-      for (var i = 0; i < n; i++) {
-        var y = TOP + i * LH + LH / 2;
-        c.globalAlpha = 0.45; c.fillStyle = col.mu; c.fillText(String(i + 1).padStart(2, " "), 8, y);
-        c.globalAlpha = 0.22; c.fillStyle = col.fg; c.fillText(CODE[i % CODE.length], GUTTER + 6, y);
-      }
-      c.globalAlpha = 1;
-      c.strokeStyle = col.ln; c.beginPath(); c.moveTo(GUTTER - 4, 0); c.lineTo(GUTTER - 4, H); c.stroke();
-      var px = W - PROD;
-      c.globalAlpha = 1; c.fillStyle = flash > 0 ? col.ac : col.ln; c.globalAlpha = flash > 0 ? 0.25 + flash * 0.5 : 0.35;
-      c.fillRect(px, 0, PROD, H); c.globalAlpha = 1;
-      c.setLineDash([4, 4]); c.strokeStyle = flash > 0 ? col.ac : col.mu; c.beginPath(); c.moveTo(px, 0); c.lineTo(px, H); c.stroke(); c.setLineDash([]);
-      c.save(); c.translate(px + PROD / 2, H / 2); c.rotate(-Math.PI / 2); c.textAlign = "center";
-      c.fillStyle = flash > 0 ? col.ac : col.mu; c.font = "400 11px " + col.mono; c.fillText("P R O D", 0, 0); c.restore(); c.textAlign = "left";
-    }
-    function frame(now) {
-      var dt = Math.min(0.05, (now - last) / 1000); last = now;
-      if (!visible) { requestAnimationFrame(frame); return; }
-      c.clearRect(0, 0, W, H);
-      drawBoard();
-      if (running) {
-        t += dt; spawnT -= dt;
-        if (spawnT <= 0) { spawn(); spawnT = Math.max(0.36, 1.15 - t * 0.012) * (0.7 + Math.random() * 0.6); }
-        for (var i = bugs.length - 1; i >= 0; i--) {
-          var b = bugs[i]; b.x += b.speed * dt; b.wob += dt * 6; b.y += Math.sin(b.wob) * 0.25;
-          if (b.x > W - PROD + 4) {
-            bugs.splice(i, 1);
-            if (b.kind === "feat") { floatText(W - PROD - 30, b.y, "shipped", col.mu); continue; }
-            lives--; setLives(); flash = 1; combo = 1; comboEl.textContent = "x1";
-            stage.classList.remove("shake", "glitch-hit"); void stage.offsetWidth; stage.classList.add("shake", "glitch-hit");
-            if (lives <= 0) { gameOver(); break; }
-          }
-        }
-      }
-      flash = Math.max(0, flash - dt * 2);
-      bugs.forEach(function (b) {
-        var frameSprite = Math.floor(b.wob * 1.2) % 2 ? BUG : BUG2;
-        if (b.kind === "feat") {
-          c.strokeStyle = col.mu; c.lineWidth = 1; c.beginPath();
-          if (c.roundRect) c.roundRect(b.x - 15, b.y - 8, 30, 16, 4); else c.rect(b.x - 15, b.y - 8, 30, 16);
-          c.stroke(); c.fillStyle = col.mu; c.font = "400 9px " + col.mono; c.textAlign = "center"; c.fillText("feat", b.x, b.y + 0.5); c.textAlign = "left";
-        } else drawSprite(b.x, b.y, frameSprite, b.kind === "crit" ? col.ac : col.fg, b.kind === "crit" ? 3.4 : 3);
-      });
-      for (var p = parts.length - 1; p >= 0; p--) {
-        var q = parts[p]; q.life -= dt * 1.6; if (q.life <= 0) { parts.splice(p, 1); continue; }
-        q.x += q.vx * dt; q.y += q.vy * dt; q.vx *= 0.92; q.vy = q.vy * 0.92 + 220 * dt;
-        c.globalAlpha = q.life; c.fillStyle = q.color; c.beginPath(); c.arc(q.x, q.y, 2, 0, 6.283); c.fill();
-      }
-      for (var f = floats.length - 1; f >= 0; f--) {
-        var fl = floats[f]; fl.life -= dt * 1.2; if (fl.life <= 0) { floats.splice(f, 1); continue; }
-        fl.y -= dt * 30; c.globalAlpha = fl.life; c.fillStyle = fl.color; c.font = "500 12px " + col.mono; c.fillText(fl.txt, fl.x - 8, fl.y);
-      }
-      c.globalAlpha = 1;
-      if (!running && overlay.hidden === false && bugs.length === 0 && !reduce) {
-        // idle demo: a lone bug wandering behind the overlay
-        if (Math.random() < 0.01) bugs.push({ x: GUTTER, y: TOP + Math.floor(Math.random() * lanes()) * LH + LH / 2, kind: "bug", speed: 30, ph: 0, wob: 0 });
-      }
-      if (!running) bugs.forEach(function (b) { b.x += b.speed * dt * 0.5; }), bugs = bugs.filter(function (b) { return b.x < W - PROD; });
-      requestAnimationFrame(frame);
-    }
-    if ("IntersectionObserver" in window) new IntersectionObserver(function (e) { visible = e[0].isIntersecting; if (visible) last = performance.now(); }).observe(stage);
-    document.addEventListener("visibilitychange", function () { last = performance.now(); });
-    setLives();
-    requestAnimationFrame(function (n) { last = n; frame(n); });
-  })();
-  cmds.game = cmds.play = function () { setTimeout(function () { openPanel("game"); }, 400); return ['<span class="m">loading bugs...</span>']; };
-
-  /* ---------- Playground tabs ---------- */
-  document.querySelectorAll(".pg-tabs .vt").forEach(function (b) {
-    b.addEventListener("click", function () {
-      document.querySelectorAll(".pg-tabs .vt").forEach(function (x) { var on = x === b; x.classList.toggle("on", on); x.setAttribute("aria-selected", on); });
-      document.querySelectorAll(".pg-panel").forEach(function (p) { p.hidden = p.dataset.panel !== b.dataset.pg; });
-      window.dispatchEvent(new Event("resize"));
-    });
-  });
-  function openPanel(name) { var t = document.querySelector('.pg-tabs .vt[data-pg="' + name + '"]'); if (t) t.click(); }
 
   /* ---------- Certificates: a 3D gallery (three.js). Scroll walks the corridor, the lights come on, each certificate hangs framed ---------- */
   (function () {
@@ -2008,7 +1301,9 @@ export function startEngine(): void {
     var srBtns = Array.prototype.slice.call(sec.querySelectorAll(".bs-real"));
     var N = srBtns.length, nSeg = N + 1;
     if (!N) return;
-    sec.style.height = (nSeg * 105 + 100) + "vh";
+    var HOLD_VH = 90; // you arrive and stand still for a moment before the walk starts
+    sec.style.height = (nSeg * 105 + HOLD_VH + 100) + "vh";
+    var HOLD = HOLD_VH / (nSeg * 105 + HOLD_VH);
     var infos = srBtns.map(function (btn, i) { return { i: i, img: btn.dataset.img, title: btn.dataset.title, issuer: btn.dataset.issuer, date: btn.dataset.date, btn: btn, ar: 1.414 }; });
     var started = false;
     function go() {
@@ -2028,7 +1323,7 @@ export function startEngine(): void {
 
     function build(mod) {
       var THREE = mod.THREE, renderer;
-      try { renderer = new THREE.WebGLRenderer({ canvas: cv, antialias: true, alpha: true }); } catch (e) { cv.style.display = "none"; return; }
+      try { renderer = new THREE.WebGLRenderer({ canvas: cv, antialias: true, alpha: true, preserveDrawingBuffer: true }); } catch (e) { cv.style.display = "none"; return; }
       renderer.setClearColor(0, 0); renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.1;
       var scene = new THREE.Scene(), camera = new THREE.PerspectiveCamera(50, 1, 0.05, 80);
       camera.rotation.order = "YXZ";
@@ -2088,7 +1383,8 @@ export function startEngine(): void {
       var DN = 420, dpos = new Float32Array(DN * 3), dseed = [];
       for (var d = 0; d < DN; d++) dseed.push([Math.random(), Math.random(), Math.random(), Math.random() * 6.28]);
       var dustG = new THREE.BufferGeometry(); dustG.setAttribute("position", new THREE.BufferAttribute(dpos, 3));
-      var dust = new THREE.Points(dustG, new THREE.PointsMaterial({ color: 0xffffff, size: 0.022, transparent: true, opacity: 0.35, depthWrite: false })); scene.add(dust);
+      var dustTex = canvasTex(64, 64, function (g, w, h) { var r = g.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 2); r.addColorStop(0, "rgba(255,255,255,1)"); r.addColorStop(0.35, "rgba(255,255,255,.6)"); r.addColorStop(1, "rgba(255,255,255,0)"); g.fillStyle = r; g.fillRect(0, 0, w, h); });
+      var dust = new THREE.Points(dustG, new THREE.PointsMaterial({ color: 0xffffff, size: 0.032, map: dustTex, transparent: true, opacity: 0.55, depthWrite: false, blending: THREE.AdditiveBlending })); scene.add(dust);
 
       function themeColors() {
         var dk = dark(), bg = (getComputedStyle(root).getPropertyValue("--bg") || (dk ? "#000" : "#fff")).trim();
@@ -2152,7 +1448,7 @@ export function startEngine(): void {
       cv.addEventListener("pointerleave", function () { hover = null; tmx = tmy = 0; });
       cv.addEventListener("click", function (e) { var fr = pick(e); if (fr) openBox(fr.i); });
       srBtns.forEach(function (btn, i) { btn.addEventListener("click", function () { openBox(i); }); });
-      function stopY(i) { var top = sec.getBoundingClientRect().top + scrollY, span = sec.offsetHeight - innerHeight; return top + span * ((i + 1) / nSeg); }
+      function stopY(i) { var top = sec.getBoundingClientRect().top + scrollY, span = sec.offsetHeight - innerHeight; return top + span * (HOLD + (1 - HOLD) * (i + 1) / nSeg); }
       function rectOf(fr) {
         var x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
         [[-0.5, -0.5], [0.5, -0.5], [0.5, 0.5], [-0.5, 0.5]].forEach(function (c) {
@@ -2197,7 +1493,7 @@ export function startEngine(): void {
       function setCap(s) { if (s === lastCap) return; lastCap = s; cap.textContent = s; cap.classList.remove("swap"); void cap.offsetWidth; cap.classList.add("swap"); }
 
       function frame(ts) {
-        var t = ts / 1000, r = sec.getBoundingClientRect(), span = Math.max(1, sec.offsetHeight - innerHeight), p = cl(-r.top / span);
+        var t = ts / 1000, r = sec.getBoundingClientRect(), span = Math.max(1, sec.offsetHeight - innerHeight), p = cl((cl(-r.top / span) - HOLD) / (1 - HOLD));
         S = p * nSeg;
         var seg = Math.min(nSeg - 1, Math.floor(S)), q = S - seg, e = ease(q / 0.72), a = K[seg], b = K[seg + 1];
         mx += (tmx - mx) * 0.06; my += (tmy - my) * 0.06;
@@ -2217,9 +1513,9 @@ export function startEngine(): void {
         // dust drifting through the corridor, around the camera
         for (var i = 0; i < DN; i++) {
           var sd = dseed[i];
-          dpos[i * 3] = (sd[0] - 0.5) * 2 * (HX - 0.2) + Math.sin(t * 0.2 + sd[3]) * 0.15;
-          dpos[i * 3 + 1] = ((sd[1] * WH + t * 0.035 * (0.4 + sd[2])) % WH);
-          dpos[i * 3 + 2] = camera.position.z + 2 - ((sd[2] * 14 + (4.5 - camera.position.z)) % 14);
+          dpos[i * 3] = (sd[0] - 0.5) * 2 * (HX - 0.2) + Math.sin(t * 0.35 + sd[3]) * 0.22;
+          dpos[i * 3 + 1] = ((sd[1] * WH + t * 0.07 * (0.4 + sd[2])) % WH) + Math.sin(t * 0.6 + sd[3] * 2) * 0.05;
+          dpos[i * 3 + 2] = camera.position.z - 0.8 - ((sd[2] * 14 + (4.5 - camera.position.z)) % 14);
         }
         dustG.attributes.position.needsUpdate = true;
         renderer.render(scene, camera);
@@ -2240,31 +1536,266 @@ export function startEngine(): void {
     }
   })();
 
-  /* ---------- Giant name: letters run from the cursor ---------- */
-  var giant = document.getElementById("giant"), gls = [];
-  var gText = giant.textContent; giant.textContent = "";
-  Array.from(gText).forEach(function (c) {
-    var s = document.createElement("span"); s.className = "gl"; s.textContent = c; giant.appendChild(s);
-    gls.push({ el: s, x: 0, y: 0, vx: 0, vy: 0 });
-  });
-  var gp = { x: -9999, y: -9999 }, footVisible = false;
-  addEventListener("pointermove", function (e) { gp.x = e.clientX; gp.y = e.clientY; }, { passive: true });
-  document.addEventListener("mouseleave", function () { gp.x = gp.y = -9999; });
-  if ("IntersectionObserver" in window) new IntersectionObserver(function (e) { footVisible = e[0].isIntersecting; }).observe(giant);
-  if (!reduce) (function gLoop() {
-    if (footVisible) {
-      gls.forEach(function (g) {
-        var r = g.el.getBoundingClientRect();
-        var cx = r.left + r.width / 2 - g.x, cy = r.top + r.height / 2 - g.y;
-        var dx = cx - gp.x, dy = cy - gp.y, d = Math.hypot(dx, dy) || 1, R = 170;
-        if (d < R) { var f = (1 - d / R) * 3.2; g.vx += dx / d * f; g.vy += dy / d * f; }
-        g.vx += -g.x * 0.07; g.vy += -g.y * 0.07;
-        g.vx *= 0.8; g.vy *= 0.8; g.x += g.vx; g.y += g.vy;
-        g.el.style.transform = "translate(" + g.x.toFixed(1) + "px," + g.y.toFixed(1) + "px) rotate(" + (g.x * 0.35).toFixed(1) + "deg)";
-        g.el.classList.toggle("hot", Math.abs(g.x) + Math.abs(g.y) > 14);
+  /* ---------- Mobile: a real 3D phone (three.js). It spins in, tips back into an exploded view of its widget tree,
+     the layers of an analytics app drop in one by one, then everything snaps flat and the phone turns once ---------- */
+  (function () {
+    var sec = document.getElementById("mobile"), cv = document.getElementById("mb-gl");
+    if (!sec || !cv) return;
+    var sticky = sec.querySelector(".mb-sticky"), head = sec.querySelector(".mb-head"), cap = sec.querySelector(".mb-cap"), navEl = document.querySelector(".nav");
+    var started = false;
+    function go() { if (started) return; started = true; loadThree().then(build).catch(function () { cv.style.display = "none"; }); }
+    if ("IntersectionObserver" in window) {
+      var near = new IntersectionObserver(function (en) { if (en[0].isIntersecting) { near.disconnect(); go(); } }, { rootMargin: "120% 0px" });
+      near.observe(sec);
+    } else go();
+    function cl(x) { return Math.max(0, Math.min(1, x)); }
+    function ease(x) { x = cl(x); return x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2; }
+    function eo(x) { x = cl(x); return 1 - Math.pow(1 - x, 3); }
+    function back(x) { x = cl(x); var c1 = 1.4; return 1 + (c1 + 1) * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2); }
+    function lerp(a, b, k) { return a + (b - a) * k; }
+
+    function build(mod) {
+      var THREE = mod.THREE, RoomEnvironment = mod.RoomEnvironment, renderer;
+      try { renderer = new THREE.WebGLRenderer({ canvas: cv, antialias: true, alpha: true }); } catch (e) { cv.style.display = "none"; return; }
+      renderer.setClearColor(0, 0); renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05;
+      var scene = new THREE.Scene(), camera = new THREE.PerspectiveCamera(28, 1, 0.05, 60);
+      var pmrem = new THREE.PMREMGenerator(renderer); scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+      var key = new THREE.DirectionalLight(0xffffff, 2.2); key.position.set(2.5, 4, 5); scene.add(key);
+      scene.add(new THREE.HemisphereLight(0xffffff, 0x222226, 0.6));
+      var rim = new THREE.DirectionalLight(0xf7a8a9, 1.1); rim.position.set(-4, 1.5, -3); scene.add(rim);
+      var css = getComputedStyle(root), SANS = (css.getPropertyValue("--sans") || "sans-serif").trim(), MONO = (css.getPropertyValue("--mono") || "monospace").trim();
+      var AC = "#f7a8a9";
+      function readAc() { AC = (getComputedStyle(root).getPropertyValue("--accent") || "#f7a8a9").trim() || "#f7a8a9"; }
+      readAc();
+
+      // ---- geometry helpers
+      function rrShape(w, h, r) {
+        var s = new THREE.Shape(), x = -w / 2, y = -h / 2;
+        s.moveTo(x + r, y); s.lineTo(x + w - r, y); s.quadraticCurveTo(x + w, y, x + w, y + r); s.lineTo(x + w, y + h - r);
+        s.quadraticCurveTo(x + w, y + h, x + w - r, y + h); s.lineTo(x + r, y + h); s.quadraticCurveTo(x, y + h, x, y + h - r);
+        s.lineTo(x, y + r); s.quadraticCurveTo(x, y, x + r, y); return s;
+      }
+      function rrGeo(w, h, r) {
+        // a rounded plane whose UVs run 0..1 across it, so a texture fills it exactly
+        var g = new THREE.ShapeGeometry(rrShape(w, h, r), 18), pos = g.attributes.position, uv = g.attributes.uv;
+        for (var i = 0; i < pos.count; i++) uv.setXY(i, (pos.getX(i) + w / 2) / w, (pos.getY(i) + h / 2) / h);
+        return g;
+      }
+      function tex(c) { var t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; return t; }
+
+      // ---- the phone
+      var phone = new THREE.Group(), body = new THREE.Group(); phone.add(body); scene.add(phone);
+      var PW = 1.0, PH = 2.1, PD = 0.09, PR = 0.17;
+      var frameM = new THREE.MeshStandardMaterial({ color: 0x8a8c93, metalness: 0.95, roughness: 0.22 });
+      var backM = new THREE.MeshStandardMaterial({ color: 0x2a2b30, metalness: 0.45, roughness: 0.3 });
+      var bodyG = new THREE.ExtrudeGeometry(rrShape(PW, PH, PR), { depth: PD, bevelEnabled: true, bevelThickness: 0.016, bevelSize: 0.016, bevelSegments: 5, curveSegments: 22 });
+      bodyG.translate(0, 0, -PD / 2); body.add(new THREE.Mesh(bodyG, frameM));
+      var glass = new THREE.Mesh(rrGeo(PW - 0.02, PH - 0.02, PR - 0.01), new THREE.MeshStandardMaterial({ color: 0x050506, metalness: 0.3, roughness: 0.08 }));
+      glass.position.z = PD / 2 + 0.0165; body.add(glass);
+      var backP = new THREE.Mesh(rrGeo(PW - 0.02, PH - 0.02, PR - 0.01), backM); backP.rotation.y = Math.PI; backP.position.z = -PD / 2 - 0.0165; body.add(backP);
+      var bump = new THREE.Mesh(new THREE.ExtrudeGeometry(rrShape(0.42, 0.42, 0.11), { depth: 0.028, bevelEnabled: true, bevelThickness: 0.008, bevelSize: 0.008, bevelSegments: 3 }), frameM);
+      bump.position.set(0.24, 0.78, -PD / 2 - 0.016); bump.rotation.y = Math.PI; body.add(bump);
+      var lensM = new THREE.MeshStandardMaterial({ color: 0x07070a, metalness: 0.7, roughness: 0.08 }), ringM = new THREE.MeshStandardMaterial({ color: 0xa2a4aa, metalness: 1, roughness: 0.18 });
+      [[0.15, 0.87], [0.33, 0.69], [0.15, 0.69]].forEach(function (q) {
+        var rg = new THREE.Mesh(new THREE.CylinderGeometry(0.072, 0.072, 0.03, 36), ringM); rg.rotation.x = Math.PI / 2; rg.position.set(q[0], q[1], -PD / 2 - 0.058); body.add(rg);
+        var ln = new THREE.Mesh(new THREE.CylinderGeometry(0.054, 0.054, 0.032, 36), lensM); ln.rotation.x = Math.PI / 2; ln.position.set(q[0], q[1], -PD / 2 - 0.06); body.add(ln);
       });
+      var logoC = document.createElement("canvas"); logoC.width = 256; logoC.height = 128;
+      var lg = logoC.getContext("2d"); lg.fillStyle = "rgba(255,255,255,.6)"; lg.font = "500 80px " + MONO; lg.textAlign = "center"; lg.textBaseline = "middle"; lg.fillText("gn_", 128, 64);
+      var logo = new THREE.Mesh(new THREE.PlaneGeometry(0.34, 0.17), new THREE.MeshBasicMaterial({ map: tex(logoC), transparent: true })); logo.rotation.y = Math.PI; logo.position.set(0, 0, -PD / 2 - 0.018); body.add(logo);
+      [[PW / 2 + 0.012, 0.45, 0.28], [-PW / 2 - 0.012, 0.56, 0.15], [-PW / 2 - 0.012, 0.32, 0.15]].forEach(function (q) {
+        var b = new THREE.Mesh(new THREE.BoxGeometry(0.022, q[2], 0.045), frameM); b.position.set(q[0], q[1], 0); body.add(b);
+      });
+
+      // ---- the screen: a dark base with the island, and the app's widgets as separate layers above it
+      var DW = PW - 0.075, DH = PH - 0.075, SZ = PD / 2 + 0.018, UX = 300, UY = 640, K = 3; // design units -> canvas pixels
+      var baseC = document.createElement("canvas"); baseC.width = UX * K; baseC.height = UY * K;
+      (function () {
+        var g = baseC.getContext("2d"); g.scale(K, K);
+        var gr = g.createLinearGradient(0, 0, 0, UY); gr.addColorStop(0, "#111114"); gr.addColorStop(1, "#0a0a0c"); g.fillStyle = gr; g.fillRect(0, 0, UX, UY);
+        g.fillStyle = "#000"; rr(g, UX / 2 - 46, 12, 92, 26, 13); g.fill();
+      })();
+      var screenM = new THREE.MeshBasicMaterial({ map: tex(baseC), toneMapped: false, transparent: true, opacity: 0, depthWrite: false });
+      var screen = new THREE.Mesh(rrGeo(DW, DH, PR - 0.045), screenM); screen.position.z = SZ; screen.renderOrder = 1; body.add(screen);
+      function rr(g, x, y, w, h, r) { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
+
+      // smooth chart data
+      var DATA = [32, 44, 38, 56, 49, 71, 64, 82, 76, 94], CPTS = [];
+      (function () {
+        var w = 268, h = 76, pts = DATA.map(function (v, i) { return [i * w / (DATA.length - 1), h - v / 100 * h]; });
+        for (var i = 0; i < pts.length - 1; i++) {
+          var p0 = pts[i - 1] || pts[i], p1 = pts[i], p2 = pts[i + 1], p3 = pts[i + 2] || p2;
+          for (var s = 0; s < 16; s++) {
+            var t = s / 16, t2 = t * t, t3 = t2 * t;
+            CPTS.push([0.5 * (2 * p1[0] + (-p0[0] + p2[0]) * t + (2 * p0[0] - 5 * p1[0] + 4 * p2[0] - p3[0]) * t2 + (-p0[0] + 3 * p1[0] - 3 * p2[0] + p3[0]) * t3),
+              0.5 * (2 * p1[1] + (-p0[1] + p2[1]) * t + (2 * p0[1] - 5 * p1[1] + 4 * p2[1] - p3[1]) * t2 + (-p0[1] + 3 * p1[1] - 3 * p2[1] + p3[1]) * t3)]);
+          }
+        }
+        CPTS.push(pts[pts.length - 1]);
+      })();
+      function txt(g, s, x, y, font, color, align) { g.font = font; g.fillStyle = color; g.textAlign = align || "left"; g.textBaseline = "alphabetic"; g.fillText(s, x, y); }
+      var MUTED = "#8b8b90", FG = "#f2f2f2", CARD = "#17171a";
+      // each layer: name, rect in design units [x, y, w, h], draw(g, state)
+      var LAYERS = [
+        ["StatusBar", [16, 12, 268, 26], function (g) {
+          txt(g, "9:41", 6, 19, "600 14px " + SANS, FG);
+          g.strokeStyle = "rgba(255,255,255,.75)"; g.lineWidth = 1.2; rr(g, 236, 7, 24, 12, 3.5); g.stroke(); g.fillStyle = FG; rr(g, 238.5, 9.5, 16, 7, 2); g.fill(); g.fillRect(261.5, 10.5, 2, 5);
+        }],
+        ["AppBar", [16, 50, 268, 42], function (g) {
+          g.fillStyle = AC; g.beginPath(); g.arc(20, 21, 19, 0, 6.283); g.fill();
+          txt(g, "gn", 20, 26, "600 13px " + MONO, "#111", "center");
+          txt(g, "Last 7 days", 50, 16, "400 11.5px " + SANS, MUTED); txt(g, "Analytics", 50, 35, "600 19px " + SANS, FG);
+          g.fillStyle = "rgba(255,255,255,.07)"; rr(g, 196, 9, 72, 24, 12); g.fill();
+          g.fillStyle = AC; g.beginPath(); g.arc(210, 21, 3.6, 0, 6.283); g.fill(); txt(g, "3 live", 220, 25.5, "500 11.5px " + MONO, "#d8d8dc");
+        }],
+        ["Metric", [16, 104, 268, 76], function (g, st) {
+          txt(g, "Total visitors", 0, 14, "400 12px " + SANS, MUTED);
+          txt(g, st.count, -1, 52, "600 38px " + SANS, FG);
+          txt(g, "▲ 18.2%", 0, 70, "500 11px " + MONO, AC); txt(g, "vs last week", 58, 70, "400 11px " + MONO, "#6f6f75");
+        }],
+        ["LineChart", [16, 190, 268, 104], function (g, st) {
+          g.strokeStyle = "rgba(255,255,255,.07)"; g.lineWidth = 1; [8, 34, 60].forEach(function (y) { g.beginPath(); g.moveTo(0, y); g.lineTo(268, y); g.stroke(); });
+          var n = Math.max(2, Math.round(CPTS.length * st.line)), pts = CPTS.slice(0, n);
+          if (st.line > 0.001) {
+            // the gradient area follows the line
+            var ag = g.createLinearGradient(0, 0, 0, 80); ag.addColorStop(0, hexA(AC, 0.5)); ag.addColorStop(1, hexA(AC, 0));
+            g.beginPath(); g.moveTo(pts[0][0], 80); pts.forEach(function (p) { g.lineTo(p[0], p[1] + 4); }); g.lineTo(pts[pts.length - 1][0], 80); g.closePath(); g.fillStyle = ag; g.fill();
+            g.beginPath(); pts.forEach(function (p, i) { if (i) g.lineTo(p[0], p[1] + 4); else g.moveTo(p[0], p[1] + 4); });
+            g.strokeStyle = AC; g.lineWidth = 2.4; g.lineCap = "round"; g.lineJoin = "round"; g.shadowColor = hexA(AC, 0.6); g.shadowBlur = 8; g.stroke(); g.shadowBlur = 0;
+            var e = pts[pts.length - 1];
+            if (st.live > 0) { var ph = (st.t % 1.8) / 1.8; g.strokeStyle = hexA(AC, (1 - ph) * 0.8 * st.live); g.lineWidth = 1.5; g.beginPath(); g.arc(e[0], e[1] + 4, 4 + ph * 11, 0, 6.283); g.stroke(); }
+            g.fillStyle = AC; g.beginPath(); g.arc(e[0], e[1] + 4, 4, 0, 6.283); g.fill(); g.strokeStyle = "#0d0d0f"; g.lineWidth = 2; g.stroke();
+          }
+          ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].forEach(function (d, i) { txt(g, d, i * 268 / 6, 100, "400 9.5px " + MONO, "#6f6f75", i === 0 ? "left" : i === 6 ? "right" : "center"); });
+        }],
+        ["StatGrid", [16, 306, 268, 134], function (g, st) {
+          [["Page views", "38 920", 0.78], ["Bounce rate", "32%", 0.32], ["Avg. visit", "2m 48s", 0.56], ["Returning", "41%", 0.41]].forEach(function (c, i) {
+            var x = (i % 2) * 138, y = Math.floor(i / 2) * 70, w = 130, h = 62;
+            g.fillStyle = CARD; rr(g, x, y, w, h, 12); g.fill(); g.strokeStyle = "rgba(255,255,255,.06)"; g.lineWidth = 1; g.stroke();
+            txt(g, c[0], x + 11, y + 18, "400 10.5px " + SANS, MUTED); txt(g, c[1], x + 11, y + 40, "600 17px " + SANS, FG);
+            g.fillStyle = "rgba(255,255,255,.08)"; rr(g, x + 11, y + 49, w - 22, 4, 2); g.fill();
+            g.fillStyle = AC; rr(g, x + 11, y + 49, Math.max(4, (w - 22) * c[2] * st.bars), 4, 2); g.fill();
+          });
+        }],
+        ["TopPages", [16, 452, 268, 118], function (g, st) {
+          txt(g, "Top pages", 0, 12, "500 11px " + SANS, MUTED);
+          [["/", "5 240", 1], ["/craft", "3 350", 0.64], ["/certificates", "2 150", 0.41]].forEach(function (r0, i) {
+            var y = 22 + i * 32;
+            g.fillStyle = hexA(AC, 0.16); rr(g, 0, y, Math.max(8, 268 * r0[2] * st.bars), 26, 8); g.fill();
+            txt(g, r0[0], 10, y + 17.5, "400 11px " + MONO, FG); txt(g, r0[1], 260, y + 17.5, "500 11px " + MONO, "#a9a9ae", "right");
+          });
+        }],
+        ["NavBar", [16, 588, 268, 40], function (g) {
+          g.strokeStyle = "rgba(255,255,255,.07)"; g.lineWidth = 1; g.beginPath(); g.moveTo(0, 2); g.lineTo(268, 2); g.stroke();
+          for (var i = 0; i < 4; i++) { g.fillStyle = i ? "rgba(255,255,255,.14)" : AC; rr(g, 22 + i * 68, 13, 22, 22, 7); g.fill(); }
+        }]
+      ];
+      function hexA(hex, a) {
+        var h = hex.replace("#", ""); if (h.length === 3) h = h.split("").map(function (c) { return c + c; }).join("");
+        var n = parseInt(h, 16); if (isNaN(n)) return "rgba(247,168,169," + a + ")";
+        return "rgba(" + (n >> 16 & 255) + "," + (n >> 8 & 255) + "," + (n & 255) + "," + a + ")";
+      }
+      var dashM = new THREE.LineDashedMaterial({ color: 0xf7a8a9, dashSize: 0.022, gapSize: 0.016, transparent: true, opacity: 0 });
+      var layers = LAYERS.map(function (L, i) {
+        var R = L[1], c = document.createElement("canvas"); c.width = Math.round(R[2] * K); c.height = Math.round(R[3] * K);
+        var w = R[2] / UX * DW, h = R[3] / UY * DH, x = (R[0] + R[2] / 2) / UX * DW - DW / 2, y = DH / 2 - (R[1] + R[3] / 2) / UY * DH;
+        var g = new THREE.Group(); g.position.set(x, y, SZ); body.add(g);
+        var t = tex(c), m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: t, transparent: true, toneMapped: false, opacity: 0, depthWrite: false }));
+        m.renderOrder = 10 + i; g.add(m);
+        // the inspector look: a dashed outline and the widget's name
+        var pad = 0.012, ow = w + pad * 2, oh = h + pad * 2, op = rrShape(ow, oh, 0.02).getPoints(8).map(function (q) { return new THREE.Vector3(q.x, q.y, 0.001); });
+        var outline = new THREE.Line(new THREE.BufferGeometry().setFromPoints(op), dashM.clone()); outline.computeLineDistances(); outline.renderOrder = 30; g.add(outline);
+        var lc = document.createElement("canvas"); lc.width = 512; lc.height = 64; var l2 = lc.getContext("2d");
+        l2.font = "500 34px " + MONO; l2.fillStyle = "#f7a8a9"; l2.textAlign = "right"; l2.textBaseline = "middle"; l2.fillText(L[0], 506, 34);
+        var label = new THREE.Mesh(new THREE.PlaneGeometry(0.4, 0.05), new THREE.MeshBasicMaterial({ map: tex(lc), transparent: true, opacity: 0, depthWrite: false, toneMapped: false }));
+        label.position.set(ow / 2 - 0.2, oh / 2 + 0.032, 0.002); label.renderOrder = 31; g.add(label);
+        return { name: L[0], draw: L[2], c: c, ctx: c.getContext("2d"), t: t, g: g, m: m, outline: outline, label: label, key: "", lc: lc, l2: l2 };
+      });
+      function paintLabels() {
+        layers.forEach(function (l) { l.l2.clearRect(0, 0, 512, 64); l.l2.font = "500 34px " + MONO; l.l2.fillStyle = AC; l.l2.textAlign = "right"; l.l2.textBaseline = "middle"; l.l2.fillText(l.name, 506, 34); l.label.material.map.needsUpdate = true; l.outline.material.color.set(AC); });
+      }
+      paintLabels();
+      function paint(l, st) {
+        var g = l.ctx; g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, l.c.width, l.c.height); g.setTransform(K, 0, 0, K, 0, 0);
+        l.draw(g, st); l.t.needsUpdate = true;
+      }
+      if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { layers.forEach(function (l) { l.key = ""; }); paintLabels(); });
+      themeBtn.addEventListener("click", function () { setTimeout(function () { readAc(); paintLabels(); layers.forEach(function (l) { l.key = ""; }); }, 80); });
+
+      // soft shadow under the phone
+      var shC = document.createElement("canvas"); shC.width = shC.height = 256;
+      (function () { var g = shC.getContext("2d"), r0 = g.createRadialGradient(128, 128, 10, 128, 128, 128); r0.addColorStop(0, "rgba(0,0,0,.55)"); r0.addColorStop(1, "rgba(0,0,0,0)"); g.fillStyle = r0; g.fillRect(0, 0, 256, 256); })();
+      var shadow = new THREE.Mesh(new THREE.PlaneGeometry(2.2, 2.2), new THREE.MeshBasicMaterial({ map: tex(shC), transparent: true, depthWrite: false, opacity: 0 }));
+      shadow.position.z = -0.6; phone.add(shadow);
+
+      // ---- layout
+      var W = 0, H = 0;
+      function size() {
+        W = sticky.clientWidth; H = sticky.clientHeight;
+        renderer.setPixelRatio(Math.min(2, devicePixelRatio || 1)); renderer.setSize(W, H, false);
+        camera.aspect = W / H; camera.updateProjectionMatrix();
+      }
+      size(); onRealResize(size);
+      var tmx = 0, tmy = 0, mx = 0, my = 0, on = false, lastCap = "", count0 = -1;
+      addEventListener("pointermove", function (e) { if (!on) return; tmx = e.clientX / innerWidth - 0.5; tmy = e.clientY / innerHeight - 0.5; }, { passive: true });
+
+      function frame(ts) {
+        var r = sec.getBoundingClientRect(), span = Math.max(1, sec.offsetHeight - innerHeight), p = reduce ? 0.78 : cl(-r.top / span), t = ts / 1000;
+        mx += (tmx - mx) * 0.06; my += (tmy - my) * 0.06;
+        // phases: spin in 0-0.12 · tip back 0.1-0.22 · layers drop 0.16-0.42 · hold · snap flat 0.56-0.7 · turn once 0.8-0.96
+        var enter = ease(p / 0.12), tilt = ease((p - 0.1) / 0.12) * (1 - ease((p - 0.56) / 0.14)), ex = 1 - ease((p - 0.56) / 0.14);
+        var spin = ease((p - 0.74) / 0.16), leave = ease((p - 0.88) / 0.12);
+        // the camera frames the phone in the space under the title, then centres it once the title has gone
+        var navB = navEl ? Math.max(0, navEl.getBoundingClientRect().bottom - sticky.getBoundingClientRect().top) : 0;
+        var hv = 1 - cl((p - 0.07) / 0.07), hb = head.getBoundingClientRect().bottom - sticky.getBoundingClientRect().top + 18;
+        var areaTop = navB + Math.max(0, hb - navB) * hv, areaBot = H - 46, areaH = Math.max(120, areaBot - areaTop);
+        var tn = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)), need = 2.3 / (areaH / H); // world height we want visible
+        var dist = Math.max(need / (2 * tn), 2.5 / (2 * tn * camera.aspect)) * (1 - 0.08 * tilt);
+        camera.position.set(0, 0, dist); camera.lookAt(0, 0, 0);
+        var upp = 2 * dist * tn / H; // world units per pixel at the phone
+        phone.position.y = -((areaTop + areaBot) / 2 - H / 2) * upp;
+        // the phone: spins in from its back, tips back into the exploded view, the mouse turns it a little
+        var sway = reduce ? 0 : Math.sin(t * 0.7) * 0.03;
+        body.rotation.set(
+          lerp(0.18, -0.78, tilt) + my * 0.25,
+          (1 - enter) * Math.PI * 1.1 + lerp(-0.28, 0.12, tilt) + mx * 0.5 + sway + spin * Math.PI * 2,
+          lerp(0.05, 0.42, tilt));
+        // it leaves the way it came: drifting back into the dark, tipping away and fading out
+        body.position.set(0, (1 - enter) * -0.5 + Math.sin(t * 1.1) * 0.015 + leave * 0.35, (1 - enter) * -1.2 - leave * 2.6);
+        body.rotation.x += leave * -0.35;
+        var fadeOut = 1 - leave;
+        cv.style.opacity = fadeOut.toFixed(3);
+        sec.querySelector(".mb-foot").style.opacity = fadeOut.toFixed(3);
+        var vis = cl(p / 0.05) * 0.999 + 0.001;
+        frameM.opacity = 1;
+        screenM.opacity = cl((p - 0.08) / 0.04);
+        shadow.material.opacity = 0.7 * enter * (1 - leave);
+        // the app's state
+        var line = ease((p - 0.3) / 0.14), bars = ease((p - 0.33) / 0.14), live = p > 0.44 ? 1 : 0;
+        var cnt = Math.round(12480 * ease((p - 0.25) / 0.14)), cs = cnt.toLocaleString("en-US").replace(/,/g, " ");
+        var st = { count: cs, line: line, bars: bars, live: live, t: t };
+        var gap = 0.042, lift = 0.16;
+        layers.forEach(function (l, i) {
+          var a = eo((p - (0.16 + i * 0.034)) / 0.07), drop = 1 - back((p - (0.16 + i * 0.034)) / 0.09);
+          l.g.position.z = SZ + 0.004 + 0.0015 * i + (lift + i * gap) * tilt * ex + drop * 1.4;
+          l.m.material.opacity = a;
+          var o = a * tilt * ex;
+          l.outline.material.opacity = o * 0.9; l.label.material.opacity = o;
+          l.outline.visible = l.label.visible = o > 0.01;
+          // repaint only what changes
+          var k = l.name === "Metric" ? cs : l.name === "LineChart" ? line.toFixed(3) + (live ? "|" + Math.floor(t * 30) : "") : (l.name === "StatGrid" || l.name === "TopPages") ? bars.toFixed(3) : "s";
+          k += AC;
+          if (k !== l.key && a > 0) { l.key = k; paint(l, st); }
+        });
+        renderer.render(scene, camera);
+        head.style.opacity = hv.toFixed(3); head.style.transform = "translate3d(" + (mx * -12).toFixed(1) + "px," + (-30 * (1 - hv)).toFixed(1) + "px,0)";
+        var idx = Math.min(layers.length - 1, Math.max(0, Math.floor((p - 0.16) / 0.034)));
+        var c2 = p < 0.1 ? "// scroll to build" : p < 0.16 ? "// opening the widget tree" : p < 0.42 ? "// " + layers[idx].name : p < 0.56 ? "// flutter run · hot reload ✓" : p < 0.72 ? "// flattening the layers" : p < 0.74 ? "// 60 fps" : p < 0.88 ? "// one codebase, every pocket" : "// see you on the other side";
+        if (c2 !== lastCap) { lastCap = c2; cap.textContent = c2; cap.classList.remove("swap"); void cap.offsetWidth; cap.classList.add("swap"); }
+      }
+      if ("IntersectionObserver" in window) new IntersectionObserver(function (en) { on = en[0].isIntersecting; }, { rootMargin: "80px 0px" }).observe(sec); else on = true;
+      (function loop(ts) { if (on) frame(ts || 0); requestAnimationFrame(loop); })(0);
     }
-    requestAnimationFrame(gLoop);
   })();
 
   /* ---------- Hero: meteor shower (slow, soft, with depth) ---------- */

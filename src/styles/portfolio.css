@@ -1092,7 +1092,7 @@ section.lp { height: 520vh; padding-block: 0; }
 .lc-sw i:nth-child(2) { background: var(--fg); } .lc-sw i:nth-child(3) { background: var(--muted); }
 .lc-fx i { height: 12px; flex: 1; border-radius: 3px; border: 1px dashed var(--accent); }
 .lp-chip:hover, .lp-chip.hit { border-color: var(--accent); box-shadow: 0 0 30px -4px var(--glow), 0 18px 40px -18px rgba(0, 0, 0, .55); }
-@media (max-width: 699px) { .lp-chip { font-size: 9.5px; min-width: 112px; gap: 4px; padding-bottom: 8px; border-radius: 9px; } .lc-bar { padding: 5px 8px; } .lc-in, .lc-out, .lc-ui, .lc-sw, .lc-fx, .lc-h1 { margin: 0 9px; } .lc-h1 { font-size: 15px; } }
+@media (max-width: 699px) { .lp-chip { font-size: 9.5px; min-width: 0; width: calc(50vw - 22px); white-space: normal; gap: 4px; padding-bottom: 8px; border-radius: 9px; } .lc-in { overflow-wrap: anywhere; } .lc-bar { padding: 5px 8px; } .lc-in, .lc-out, .lc-ui, .lc-sw, .lc-fx, .lc-h1 { margin: 0 9px; } .lc-h1 { font-size: 15px; } }
 .lp-over { position: absolute; z-index: 3; overflow: hidden; display: none; pointer-events: none; background: var(--bg); }
 @media (prefers-reduced-motion: reduce) { .lp-screen::after { animation: none; } .lp-screen.gl::before, .lp-screen.gl .lp-ed, .lp-screen.gl .lp-app, .lp-screen.big::before { animation: none; } }
 /* the section the laptop zooms into sits under the last screen of the laptop scene */
@@ -1131,3 +1131,101 @@ section.gal { position: relative; height: 625vh; padding-block: 0; }
 .gl-boxcap { position: absolute; left: 16px; right: 16px; bottom: calc(30px + env(safe-area-inset-bottom, 0px)); text-align: center; font-family: var(--mono); font-size: 11.5px; font-weight: 300; color: var(--muted); opacity: 0; transition: opacity .35s; }
 .gl-box.on .gl-boxcap { opacity: 1; }
 
+
+/* ---------- Mobile: a real 3D phone (three.js) assembles an app layer by layer ---------- */
+section.mb { height: 520vh; padding-block: 0; }
+.mb-sticky { position: sticky; top: 0; height: 100vh; height: 100svh; overflow: hidden; }
+.mb-gl { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.mb-head { position: absolute; left: 0; right: 0; top: calc(84px + env(safe-area-inset-top, 0px)); z-index: 3; pointer-events: none; will-change: transform, opacity; }
+.mb-head .label { pointer-events: auto; }
+.mb-title { margin: 0; font-size: clamp(2.2rem, 5.6vw, 4.2rem); font-weight: 500; letter-spacing: -0.055em; line-height: 1; }
+.mb-title span { color: var(--muted); }
+.mb-foot { position: absolute; left: 0; right: 0; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); z-index: 3; font-family: var(--mono); font-size: 11.5px; font-weight: 300; color: var(--muted); }
+.mb-cap.swap { animation: lpCap .45s var(--ease) both; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+
+/* nav links: a clean roll on hover */
+.nav-links a .roll { display: inline-grid; overflow: hidden; vertical-align: top; }
+.nav-links a .roll span { grid-area: 1 / 1; display: block; transition: transform .45s var(--ease); }
+.nav-links a .roll span + span { transform: translateY(105%); color: var(--fg); }
+.nav-links a:hover .roll span, .nav-links a:focus-visible .roll span { transform: translateY(-105%); }
+.nav-links a:hover .roll span + span, .nav-links a:focus-visible .roll span + span { transform: none; }
+@media (prefers-reduced-motion: reduce) { .nav-links a .roll span { transition: none; } }
+
+
+/* ---------- Elsewhere: three big doors ---------- */
+section.ct { padding-block: 72px 110px; }
+.ct-top { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px 32px; flex-wrap: wrap; margin: 6px 0 34px; }
+.ct-title { margin: 0; font-size: clamp(2.2rem, 5.6vw, 4.2rem); font-weight: 500; letter-spacing: -0.055em; line-height: 1; }
+.ct-title span { color: var(--accent); }
+.ct-sub { margin: 0; font-family: var(--mono); font-size: 12px; color: var(--muted); }
+.ct-list { list-style: none; margin: 0; padding: 0; }
+.ct-list li { position: relative; }
+/* the rules between the doors draw themselves */
+.ct-list li::before, .ct-list li:last-child::after { content: ""; position: absolute; left: 0; right: 0; height: 1px; background: var(--line); transform: scaleX(0); transform-origin: 0 50%; transition: transform 1.1s var(--ease) var(--d, 0s); z-index: 1; }
+.ct-list li::before { top: 0; }
+.ct-list li:last-child::after { bottom: 0; }
+.ct-list li.in::before, .ct-list li.in::after, .ct-list li:not(.pre)::before, .ct-list li:not(.pre):last-child::after { transform: scaleX(1); }
+.ct-row {
+  position: relative; display: grid; grid-template-columns: 3.2em 1fr auto auto; align-items: center; gap: 0 clamp(12px, 3vw, 40px);
+  padding: clamp(14px, 2.4vw, 26px) clamp(10px, 1.6vw, 22px); color: var(--fg); overflow: hidden; isolation: isolate; border-radius: 4px;
+}
+/* the pink flood */
+.ct-row::before { content: ""; position: absolute; inset: 0; z-index: -1; background: var(--accent); transform: scaleY(0); transform-origin: 50% 100%; transition: transform .55s var(--ease); }
+.ct-row:hover::before, .ct-row:focus-visible::before { transform: scaleY(1); transform-origin: 50% 0%; }
+.ct-n { font-family: var(--mono); font-size: 12px; color: var(--muted); transition: color .3s; align-self: start; padding-top: .9em; }
+/* one mask for the whole word, so letters never clip each other; both copies are identical so nothing jumps */
+.ct-name { display: inline-flex; font-size: clamp(2.6rem, 9vw, 8rem); font-weight: 500; letter-spacing: -0.05em; line-height: 1; white-space: nowrap; overflow: hidden; padding-block: .08em .14em; margin-block: -.08em -.14em; justify-self: start; }
+.ct-ch { display: inline-grid; }
+.ct-ch span { grid-area: 1 / 1; transition: transform .55s cubic-bezier(.7, 0, .2, 1) calc(var(--k) * 14ms); will-change: transform; backface-visibility: hidden; }
+.ct-ch span + span { transform: translateY(130%); }
+.ct-row:hover .ct-ch span, .ct-row:focus-visible .ct-ch span { transform: translateY(-130%); }
+.ct-row:hover .ct-ch span + span, .ct-row:focus-visible .ct-ch span + span { transform: none; }
+.ct-meta { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; text-align: right; font-size: 13px; color: var(--muted); transition: color .3s; }
+.ct-handle { font-family: var(--mono); font-size: 12px; opacity: 0; transform: translateY(6px); transition: opacity .35s, transform .45s var(--ease); }
+.ct-arrow { width: clamp(30px, 4vw, 56px); height: clamp(30px, 4vw, 56px); border-radius: 50%; border: 1px solid var(--line); display: grid; place-items: center; transition: transform .5s var(--ease), border-color .3s, background .3s; }
+.ct-arrow svg { width: 42%; height: 42%; transition: transform .5s var(--ease); }
+.ct-row:hover, .ct-row:focus-visible { color: #111; }
+.ct-row:hover .ct-n, .ct-row:hover .ct-meta, .ct-row:focus-visible .ct-meta { color: rgba(17, 17, 17, .7); }
+.ct-row:hover .ct-handle, .ct-row:focus-visible .ct-handle { opacity: 1; transform: none; }
+.ct-row:hover .ct-arrow { background: #111; border-color: #111; color: var(--accent); transform: rotate(45deg); }
+/* the other doors dim while you look at one */
+.ct-list:hover li .ct-row:not(:hover) { opacity: .35; }
+.ct-row { transition: opacity .35s; }
+/* the preview that floats with the cursor */
+.ct-peek {
+  position: fixed; left: 0; top: 0; z-index: 30; width: 250px; height: 184px; pointer-events: none; border-radius: 16px; overflow: hidden;
+  background: #0d0d0f; color: #f2f2f2; box-shadow: 0 30px 60px -20px rgba(0, 0, 0, .6), 0 0 0 1px rgba(255, 255, 255, .08);
+  opacity: 0; scale: .6; transition: opacity .3s, scale .45s var(--ease); will-change: transform;
+}
+.ct-peek.on { opacity: 1; scale: 1; }
+.pk { position: absolute; inset: 0; padding: 16px; display: flex; flex-direction: column; gap: 8px; opacity: 0; transform: translateY(14px); transition: opacity .3s, transform .45s var(--ease); }
+.ct-peek[data-k="li"] .pk-li, .ct-peek[data-k="gh"] .pk-gh, .ct-peek[data-k="ig"] .pk-ig { opacity: 1; transform: none; }
+.pk b { font-size: 14px; font-weight: 600; letter-spacing: -0.01em; }
+.pk em { font-style: normal; font-size: 11px; color: #8b8b90; }
+.pk-head { display: flex; align-items: baseline; justify-content: space-between; }
+.pk-li { align-items: flex-start; padding-top: 0; gap: 3px; }
+.pk-cover { align-self: stretch; height: 58px; margin: 0 -16px; background: linear-gradient(120deg, var(--accent), #2a2b30 70%); }
+.pk-av { width: 52px; height: 52px; margin-top: -26px; border-radius: 50%; display: grid; place-items: center; background: #111; color: var(--accent); font-family: var(--mono); font-weight: 600; box-shadow: 0 0 0 3px #0d0d0f; }
+.pk-btn { margin-top: 6px; padding: 5px 12px; border-radius: 999px; background: var(--accent); color: #111; font-size: 11px; font-weight: 600; }
+.pk-grid { display: grid; grid-template-rows: repeat(7, 1fr); grid-auto-flow: column; gap: 3px; flex: 1; }
+.pk-grid i, .pk-legend i { border-radius: 2px; background: rgba(255, 255, 255, .07); }
+.pk-grid i[data-l="1"], .pk-legend i:nth-of-type(1) { background: color-mix(in srgb, var(--accent) 30%, #1a1a1d); }
+.pk-grid i[data-l="2"], .pk-legend i:nth-of-type(2) { background: color-mix(in srgb, var(--accent) 55%, #1a1a1d); }
+.pk-grid i[data-l="3"], .pk-legend i:nth-of-type(3) { background: color-mix(in srgb, var(--accent) 80%, #1a1a1d); }
+.pk-grid i[data-l="4"], .pk-legend i:nth-of-type(4) { background: var(--accent); }
+.ct-peek[data-k="gh"] .pk-grid i { animation: pkPop .4s var(--ease) both; animation-delay: calc(var(--i) * 3ms); }
+@keyframes pkPop { from { transform: scale(0); } }
+.pk-legend { display: flex; align-items: center; justify-content: flex-end; gap: 3px; }
+.pk-legend i { width: 9px; height: 9px; }
+.pk-tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; flex: 1; }
+.pk-tiles i { border-radius: 5px; background: linear-gradient(calc(var(--i) * 40deg), color-mix(in srgb, var(--accent) calc(30% + var(--i) * 7%), #18181b), #232328); }
+.ct-peek[data-k="ig"] .pk-tiles i { animation: pkPop .45s var(--ease) both; animation-delay: calc(var(--i) * 40ms); }
+@media (max-width: 699px) {
+  section.ct { padding-block: 56px 90px; }
+  .ct-row { grid-template-columns: 2.2em 1fr auto; padding-inline: 4px; }
+  .ct-meta { display: none; }
+  .ct-n { padding-top: .5em; }
+}
+@media (hover: none) { .ct-peek { display: none; } }
+@media (prefers-reduced-motion: reduce) { .ct-ch span, .ct-row::before, .ct-list li::before { transition: none; } }

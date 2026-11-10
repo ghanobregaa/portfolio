@@ -9,7 +9,7 @@ import { Experience } from "@/components/sections/Experience";
 import { Certificates } from "@/components/sections/Certificates";
 import { Work } from "@/components/sections/Work";
 import { Stack } from "@/components/sections/Stack";
-import { Playground } from "@/components/sections/Playground";
+import { MobileApp } from "@/components/sections/MobileApp";
 import { Contact } from "@/components/sections/Contact";
 import { Footer } from "@/components/layout/Footer";
 import { Toast } from "@/components/layout/Toast";
@@ -34,7 +34,7 @@ export default function App() {
         <Work />
         <Certificates />
         <Stack />
-        <Playground />
+        <MobileApp />
         <Contact />
       </main>
       <Footer />

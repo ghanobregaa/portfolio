@@ -2,7 +2,7 @@ export function Nav() {
   return (
     <nav className="nav">
       <div className="container">
-        <a className="mark" href="#top">gn<i>_</i><span className="zzz" aria-hidden="true"><b>z</b><b>z</b><b>z</b></span></a>
+        <a className="mark" href="#top">gn<i>_</i></a>
         <div className="nav-links">
           <a href="#about" data-link="about">About</a>
           <a href="#experience" data-link="experience">Experience</a>
