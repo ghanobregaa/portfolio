@@ -17,18 +17,27 @@ export function startEngine(): void {
   started = true;
 
   var root = document.documentElement;
+  // phones fire "resize" while the address bar slides in and out; only rebuild on a real change
+  function onRealResize(fn) {
+    var lw = innerWidth, lh = innerHeight, t = 0;
+    addEventListener("resize", function () {
+      if (innerWidth === lw && Math.abs(innerHeight - lh) < 160) return;
+      clearTimeout(t); t = setTimeout(function () { lw = innerWidth; lh = innerHeight; fn(); }, 120);
+    });
+  }
   var reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
   var fine = matchMedia("(pointer: fine)").matches;
 
   /* ---------- Theme with circular reveal ---------- */
-  var saved = null; try { saved = localStorage.getItem("theme"); } catch (e) { }
-  root.setAttribute("data-theme", saved === "light" ? "light" : "dark");
+  // always opens in dark; the toggle only changes the current visit
+  try { localStorage.removeItem("theme"); } catch (e) { }
+  root.setAttribute("data-theme", "dark");
   var themeBtn = document.getElementById("theme-toggle");
   themeBtn.addEventListener("click", function (ev) {
     if (window.__noThemeClick) { window.__noThemeClick = false; return; }
     var current = root.getAttribute("data-theme") || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
     var next = current === "dark" ? "light" : "dark";
-    function apply() { root.setAttribute("data-theme", next); try { localStorage.setItem("theme", next); } catch (e) { } readColors(); }
+    function apply() { root.setAttribute("data-theme", next); readColors(); }
     if (!document.startViewTransition || reduce) { apply(); return; }
     var r = themeBtn.getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + r.height / 2;
     var end = Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y));
@@ -590,7 +599,7 @@ export function startEngine(): void {
     var build = document.getElementById("lp-build"), bt = document.getElementById("lp-bt"), bp = document.getElementById("lp-bp"), app = document.getElementById("lp-app");
     var head = document.getElementById("lp-head"), cap = document.getElementById("lp-cap"), footEl = sec.querySelector(".lp-foot");
     var chipsEl = document.getElementById("lp-chips"), over = document.getElementById("lp-over"), view = document.getElementById("lp-view");
-    var stackSec = document.querySelector(".lp-next"); // the section the screen turns into (Stack)
+    var stackSec = document.querySelector(".lp-next"); // the section the screen turns into (the gallery)
     var SW = 1000, SH = 625;
 
     // ---- the file that gets typed: [text, class, stack name]
@@ -632,7 +641,7 @@ export function startEngine(): void {
       return out.join("\n") + '<span class="cur"></span>';
     }
 
-    // ---- the next section (Stack), copied onto the screen
+    // ---- the next section (the gallery), copied onto the screen
     var realTracks = [], copyTracks = [];
     function makeCopy() {
       if (!stackSec) return;
@@ -644,11 +653,16 @@ export function startEngine(): void {
         k.querySelectorAll("[data-reveal],[data-scramble],.pre").forEach(function (x) { x.removeAttribute("data-reveal"); x.removeAttribute("data-scramble"); x.classList.remove("pre"); x.classList.add("in"); });
         c.appendChild(k); h += el.offsetHeight; el = el.nextElementSibling;
       }
+      // a WebGL scene in the next section hands over a still of its first frame
+      var cvs = stackSec.querySelectorAll("canvas"), ccs = c.querySelectorAll("canvas");
+      for (var ci = 0; ci < cvs.length; ci++) if (cvs[ci].__snap) { try { var sc = cvs[ci].__snap(); ccs[ci].width = sc.width; ccs[ci].height = sc.height; ccs[ci].getContext("2d").drawImage(sc, 0, 0); } catch (e) {} }
       view.innerHTML = ""; view.appendChild(c);
       view.style.width = innerWidth + "px"; view.style.height = innerHeight + "px";
       realTracks = Array.prototype.slice.call(stackSec.querySelectorAll(".track")); copyTracks = Array.prototype.slice.call(c.querySelectorAll(".track"));
     }
     makeCopy();
+    if (stackSec) stackSec.addEventListener("snap-ready", makeCopy);
+    themeBtn.addEventListener("click", function () { setTimeout(makeCopy, 220); });
     function syncTracks() {
       // the timeline rail fills with scroll on the real section; mirror it on the copy
       var rt = stackSec && stackSec.querySelector(".timeline"), ct = view.querySelector(".timeline");
@@ -772,7 +786,7 @@ export function startEngine(): void {
       renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1)); renderer.setSize(W, H, false);
       camera.aspect = W / H; camera.updateProjectionMatrix(); makeCopy();
     }
-    size(); addEventListener("resize", size);
+    size(); onRealResize(size);
 
     // ---- 4-point perspective mapping of the HTML screen onto the 3D display
     function adj(m) { return [m[4] * m[8] - m[5] * m[7], m[2] * m[7] - m[1] * m[8], m[1] * m[5] - m[2] * m[4], m[5] * m[6] - m[3] * m[8], m[0] * m[8] - m[2] * m[6], m[2] * m[3] - m[0] * m[5], m[3] * m[7] - m[4] * m[6], m[1] * m[6] - m[0] * m[7], m[0] * m[4] - m[1] * m[3]]; }
@@ -1900,90 +1914,245 @@ export function startEngine(): void {
   });
   function openPanel(name) { var t = document.querySelector('.pg-tabs .vt[data-pg="' + name + '"]'); if (t) t.click(); }
 
-  /* ---------- Certificates: books get placed on the shelf when it scrolls in ---------- */
+  /* ---------- Certificates: a 3D gallery (three.js). Scroll walks the corridor, the lights come on, each certificate hangs framed ---------- */
   (function () {
-    var shelf = document.getElementById("shelf");
-    if (!shelf || reduce || !("IntersectionObserver" in window)) return;
-    Array.prototype.forEach.call(shelf.querySelectorAll(".books > *"), function (el, i) { el.style.setProperty("--i", i); });
-    if (shelf.getBoundingClientRect().top < innerHeight * 0.85) return; // already on screen: no surprise animation
-    shelf.classList.add("pre");
-    var io = new IntersectionObserver(function (en) {
-      if (!en[0].isIntersecting) return;
-      io.disconnect(); shelf.classList.remove("pre"); shelf.classList.add("in");
-    }, { threshold: 0.35 });
-    io.observe(shelf);
-  })();
+    var sec = document.getElementById("certificates"), cv = document.getElementById("gl-cv");
+    if (!sec || !cv) return;
+    var sticky = sec.querySelector(".gl-sticky"), head = sec.querySelector(".gl-head"), cap = document.getElementById("gl-cap"), countEl = document.getElementById("gl-count");
+    var box = document.getElementById("gl-box"), boxImg = document.getElementById("gl-img"), boxCap = document.getElementById("gl-boxcap"), closeBtn = document.getElementById("gl-close");
+    var srBtns = Array.prototype.slice.call(sec.querySelectorAll(".bs-real"));
+    var N = srBtns.length, nSeg = N + 1;
+    if (!N) return;
+    sec.style.height = (nSeg * 105 + 100) + "vh";
+    var infos = srBtns.map(function (btn, i) { return { i: i, img: btn.dataset.img, title: btn.dataset.title, issuer: btn.dataset.issuer, date: btn.dataset.date, btn: btn, ar: 1.414 }; });
+    var started = false;
+    function go() {
+      if (started) return; started = true;
+      var left = N;
+      function one() { if (--left === 0) loadThree().then(build).catch(function () { cv.style.display = "none"; }); }
+      infos.forEach(function (f) { var im = new Image(); im.onload = function () { f.ar = im.naturalWidth / im.naturalHeight; f.el = im; one(); }; im.onerror = one; im.src = f.img; });
+    }
+    if ("IntersectionObserver" in window) {
+      var near = new IntersectionObserver(function (en) { if (en[0].isIntersecting) { near.disconnect(); go(); } }, { rootMargin: "150% 0px" });
+      near.observe(sec);
+    } else go();
+    function cl(x) { return Math.max(0, Math.min(1, x)); }
+    function ease(x) { x = cl(x); return x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2; }
+    function lerp(a, b, k) { return a + (b - a) * k; }
+    function pad(n) { return String(n).padStart(2, "0"); }
 
-  /* ---------- Certificates: pull a book off the shelf, it flies over and opens ---------- */
-  (function () {
-    var books = document.querySelectorAll(".book.real");
-    if (!books.length) return;
-    var ov = document.createElement("div"); ov.className = "bk-overlay"; ov.hidden = true;
-    ov.setAttribute("role", "dialog"); ov.setAttribute("aria-modal", "true"); ov.setAttribute("aria-label", "Certificate");
-    ov.innerHTML =
-      '<div class="bk" id="bk">' +
-        '<div class="bk-shadow"></div><div class="bk-back"></div><div class="bk-spine"></div><div class="bk-edge"></div><div class="bk-edgetop"></div>' +
-        '<div class="bk-pages"><img alt=""></div>' +
-        '<div class="bk-cover"><div class="bk-front"><span class="k"></span><b></b><span class="d"><span></span><span>gn_</span></span></div>' +
-        '<div class="bk-inside"><span class="k">Certificate of completion</span><b></b><span></span></div></div>' +
-      '</div><button class="bk-close" type="button" aria-label="Close">×</button><span class="bk-hint">click anywhere to put it back</span>';
-    document.body.appendChild(ov);
-    var bk = ov.querySelector(".bk"), img = ov.querySelector(".bk-pages img"), current = null, busy = false, timers = [];
-    function later(fn, ms) { timers.push(setTimeout(fn, ms)); }
-    function clearT() { timers.forEach(clearTimeout); timers = []; }
-    // where the book has to start so it looks like it came off the shelf: spine facing us, at the spine's spot
-    function fromShelf(b) {
-      var r = b.getBoundingClientRect(), bh = bk.offsetHeight, s = r.height / bh;
-      var dx = r.left + r.width / 2 - innerWidth / 2, dy = r.top + r.height / 2 - innerHeight / 2;
-      return "translate3d(" + dx.toFixed(1) + "px," + dy.toFixed(1) + "px,0) scale(" + s.toFixed(3) + ") rotateY(90deg)";
-    }
-    function spreadShift() { return innerWidth >= 700 ? bk.offsetWidth / 2 : 0; }
-    // the book takes the shape of its certificate: portrait certificates make a tall book, landscape a wide one
-    function sizeBook(ar) {
-      var maxW = innerWidth >= 700 ? Math.min(520, innerWidth * 0.44) : Math.min(400, innerWidth * 0.82), maxH = innerHeight * (innerWidth >= 700 ? 0.7 : 0.62);
-      var w = maxW, h = w / ar;
-      if (h > maxH) { h = maxH; w = h * ar; }
-      bk.style.setProperty("--bw", w.toFixed(1) + "px"); bk.style.setProperty("--bh", h.toFixed(1) + "px");
-    }
-    function open(b) {
-      if (busy || current) return;
-      var pre = new Image(); pre.src = b.dataset.img;
-      if (!pre.complete || !pre.naturalWidth) { busy = true; pre.onload = pre.onerror = function () { busy = false; b.dataset.ar = pre.naturalWidth ? pre.naturalWidth / pre.naturalHeight : 1.4; open(b); }; return; }
-      b.dataset.ar = pre.naturalWidth / pre.naturalHeight;
-      busy = true; current = b; clearT();
-      sizeBook(parseFloat(b.dataset.ar) * 1.02);
-      var cs = getComputedStyle(b);
-      bk.style.setProperty("--bk-c", cs.backgroundColor); bk.style.setProperty("--bk-ink", cs.color);
-      ov.querySelector(".bk-front .k").textContent = b.dataset.issuer;
-      ov.querySelector(".bk-front b").textContent = b.dataset.title;
-      ov.querySelector(".bk-front .d span").textContent = b.dataset.date;
-      ov.querySelector(".bk-inside b").textContent = b.dataset.title;
-      ov.querySelector(".bk-inside span:not(.k)").textContent = b.dataset.issuer + " · " + b.dataset.date;
-      img.src = b.dataset.img; img.alt = "Certificate: " + b.dataset.title;
-      ov.hidden = false; bk.classList.remove("open");
-      bk.style.transition = "none"; bk.style.transform = fromShelf(b); void bk.offsetWidth; bk.style.transition = "";
-      b.classList.add("out");
-      requestAnimationFrame(function () {
-        ov.classList.add("on");
-        // fly to the middle, turning to show the cover
-        bk.style.transform = "translate3d(0,0,0) rotateX(8deg) rotateY(-14deg)";
-        later(function () { bk.classList.add("open"); bk.style.transform = "translate3d(" + spreadShift() + "px,0,0) rotateX(12deg) rotateY(0deg)"; }, reduce ? 20 : 950);
-        later(function () { busy = false; ov.querySelector(".bk-close").focus({ preventScroll: true }); }, reduce ? 40 : 2000);
+    function build(mod) {
+      var THREE = mod.THREE, renderer;
+      try { renderer = new THREE.WebGLRenderer({ canvas: cv, antialias: true, alpha: true }); } catch (e) { cv.style.display = "none"; return; }
+      renderer.setClearColor(0, 0); renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.1;
+      var scene = new THREE.Scene(), camera = new THREE.PerspectiveCamera(50, 1, 0.05, 80);
+      camera.rotation.order = "YXZ";
+      var fog = new THREE.Fog(0x000000, 5, 24); scene.fog = fog;
+      var hemi = new THREE.HemisphereLight(0xffffff, 0x222226, 0.2); scene.add(hemi);
+      function dark() { return (root.getAttribute("data-theme") || "dark") === "dark"; }
+      function canvasTex(w, h, draw) {
+        var c = document.createElement("canvas"); c.width = w; c.height = h; draw(c.getContext("2d"), w, h);
+        var t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; return t;
+      }
+      var MONO = (getComputedStyle(root).getPropertyValue("--mono") || "monospace").trim(), SANS = (getComputedStyle(root).getPropertyValue("--sans") || "sans-serif").trim();
+      var EY = 1.6, GZ = 7, Z0 = -6, WH = 4.2, zEnd = Z0 - (N - 1) * GZ - GZ, LEN = 8 - zEnd, zMid = (8 + zEnd) / 2;
+
+      // ---- the room
+      var wallM = new THREE.MeshStandardMaterial({ roughness: 0.92 }), floorM = new THREE.MeshStandardMaterial({ roughness: 0.42, metalness: 0.25 }), ceilM = new THREE.MeshStandardMaterial({ roughness: 1 });
+      var accM = new THREE.MeshBasicMaterial({ color: 0xf7a8a9 });
+      var wallL = new THREE.Mesh(new THREE.BoxGeometry(0.1, WH, LEN), wallM), wallR = wallL.clone(); scene.add(wallL); scene.add(wallR);
+      var floor = new THREE.Mesh(new THREE.PlaneGeometry(1, LEN), floorM); floor.rotation.x = -Math.PI / 2; floor.position.set(0, 0, zMid); scene.add(floor);
+      var ceil = new THREE.Mesh(new THREE.PlaneGeometry(1, LEN), ceilM); ceil.rotation.x = Math.PI / 2; ceil.position.set(0, WH, zMid); scene.add(ceil);
+      var endWall = new THREE.Mesh(new THREE.BoxGeometry(1, WH, 0.1), wallM); endWall.position.set(0, WH / 2, zEnd); scene.add(endWall);
+      var stripL = new THREE.Mesh(new THREE.BoxGeometry(0.015, 0.025, LEN), accM), stripR = stripL.clone(); scene.add(stripL); scene.add(stripR);
+      var endTex = canvasTex(1024, 512, function (g, w, h) {
+        g.fillStyle = "#fff"; g.textAlign = "center"; g.textBaseline = "middle";
+        g.font = "600 150px " + SANS; g.fillText("More soon.", w / 2, h * 0.42);
+        g.globalAlpha = 0.6; g.font = "400 32px " + MONO; g.fillText("// this wall is reserved for what I learn next", w / 2, h * 0.72);
       });
+      var endText = new THREE.Mesh(new THREE.PlaneGeometry(3.0, 1.5), new THREE.MeshBasicMaterial({ map: endTex, transparent: true, fog: true })); endText.position.set(0, EY + 0.05, zEnd + 0.06); scene.add(endText);
+      var endLight = new THREE.PointLight(0xf7a8a9, 0, 9, 1.6); endLight.position.set(0, 2.6, zEnd + 2.2); scene.add(endLight);
+
+      // ---- frames
+      var glowTex = canvasTex(128, 128, function (g, w, h) { var r = g.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 2); r.addColorStop(0, "rgba(255,255,255,.9)"); r.addColorStop(1, "rgba(255,255,255,0)"); g.fillStyle = r; g.fillRect(0, 0, w, h); });
+      var frameM = new THREE.MeshStandardMaterial({ color: 0x0b0b0c, roughness: 0.35, metalness: 0.6 }), matM = new THREE.MeshStandardMaterial({ color: 0xf4f2ee, roughness: 0.95 });
+      var fixM = new THREE.MeshStandardMaterial({ color: 0x1c1c1f, roughness: 0.4, metalness: 0.8 });
+      var pickables = [], frames = [];
+      infos.forEach(function (f, i) {
+        var side = i % 2 ? 1 : -1, grp = new THREE.Group(), MG = 0.13;
+        var tex = new THREE.Texture(f.el || document.createElement("canvas")); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 8; tex.needsUpdate = true;
+        var certM = new THREE.MeshBasicMaterial({ map: tex, toneMapped: false });
+        var outer = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 0.07), frameM), mat = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 0.012), matM), cert = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), certM);
+        mat.position.z = 0.04; cert.position.z = 0.048; grp.add(outer); grp.add(mat); grp.add(cert);
+        var plaque = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 0.3), new THREE.MeshBasicMaterial({ transparent: true, map: canvasTex(880, 240, function (g, w, h) {
+          g.fillStyle = "#fff"; g.textBaseline = "middle";
+          g.globalAlpha = 0.55; g.font = "500 30px " + MONO; g.fillText(pad(i + 1) + " / " + pad(N) + "  ·  " + f.date.toUpperCase(), 0, 34);
+          g.globalAlpha = 1; var fs = 52; g.font = "600 " + fs + "px " + SANS; while (g.measureText(f.title).width > w - 4 && fs > 26) { fs -= 2; g.font = "600 " + fs + "px " + SANS; }
+          g.fillText(f.title, 0, 110); g.globalAlpha = 0.6; g.font = "400 34px " + SANS; g.fillText(f.issuer, 0, 186);
+        }) }));
+        grp.add(plaque);
+        grp.rotation.y = -side * Math.PI / 2; scene.add(grp);
+        var spot = new THREE.SpotLight(0xfff4e6, 0, 10, 0.66, 0.9, 1.3), tgt = new THREE.Object3D(); scene.add(spot); scene.add(tgt); spot.target = tgt;
+        var fix = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.09, 0.22, 20), fixM); scene.add(fix);
+        var bulb = new THREE.Mesh(new THREE.CircleGeometry(0.06, 20), new THREE.MeshBasicMaterial({ color: 0x000000 })); scene.add(bulb);
+        var pool = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: glowTex, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false })); pool.rotation.x = -Math.PI / 2; scene.add(pool);
+        var fr = { f: f, i: i, side: side, grp: grp, outer: outer, mat: mat, cert: cert, certM: certM, plaque: plaque, spot: spot, tgt: tgt, fix: fix, bulb: bulb, pool: pool, MG: MG, z: Z0 - i * GZ, lit: 0, hov: 0 };
+        cert.userData.fr = fr; mat.userData.fr = fr; pickables.push(cert, mat); frames.push(fr);
+      });
+      // dust in the light
+      var DN = 160, dpos = new Float32Array(DN * 3), dseed = [];
+      for (var d = 0; d < DN; d++) dseed.push([Math.random(), Math.random(), Math.random(), Math.random() * 6.28]);
+      var dustG = new THREE.BufferGeometry(); dustG.setAttribute("position", new THREE.BufferAttribute(dpos, 3));
+      var dust = new THREE.Points(dustG, new THREE.PointsMaterial({ color: 0xffffff, size: 0.022, transparent: true, opacity: 0.35, depthWrite: false })); scene.add(dust);
+
+      function themeColors() {
+        var dk = dark(), bg = (getComputedStyle(root).getPropertyValue("--bg") || (dk ? "#000" : "#fff")).trim();
+        try { fog.color.set(bg); } catch (e) { fog.color.set(dk ? 0x000000 : 0xffffff); }
+        wallM.color.set(dk ? 0x2a2a2f : 0xf0f0f2); floorM.color.set(dk ? 0x141417 : 0xd4d4d9); ceilM.color.set(dk ? 0x0a0a0b : 0xe6e6ea);
+        hemi.intensity = dk ? 0.75 : 1.6; hemi.groundColor.set(dk ? 0x222226 : 0xd9d9de); accM.color.set(dk ? 0xf7a8a9 : 0xea7479);
+        endText.material.color.set(dk ? 0xffffff : 0x111111); dust.material.color.set(dk ? 0xffffff : 0x666666);
+        frames.forEach(function (fr) { fr.plaque.material.color.set(dk ? 0xffffff : 0x111111); });
+      }
+      themeColors(); themeBtn.addEventListener("click", function () { setTimeout(themeColors, 80); });
+
+      // ---- layout: corridor width and the camera stops depend on the viewport
+      var W = 0, H = 0, HX = 2.4, K = [];
+      function size() {
+        W = sticky.clientWidth; H = sticky.clientHeight;
+        renderer.setPixelRatio(Math.min(2, devicePixelRatio || 1)); renderer.setSize(W, H, false);
+        camera.aspect = W / H; camera.fov = camera.aspect < 0.8 ? 62 : 50; camera.updateProjectionMatrix();
+        var tn = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)), port = camera.aspect < 0.8, maxD = 0;
+        frames.forEach(function (fr) {
+          var ar = fr.f.ar, w, h;
+          if (ar >= 1) { w = port ? 1.55 : 2.3; h = w / ar; } else { h = port ? 1.9 : 2.05; w = h * ar; }
+          fr.w = w; fr.h = h;
+          var ow = w + fr.MG * 2 + 0.1, oh = h + fr.MG * 2 + 0.1;
+          fr.outer.scale.set(ow, oh, 1); fr.mat.scale.set(w + fr.MG * 2, h + fr.MG * 2, 1); fr.cert.scale.set(w, h, 1);
+          var pw = Math.min(1.1, ow); fr.plaque.scale.set(pw / 1.1, pw / 1.1, 1); fr.plaque.position.set(-ow / 2 + pw / 2, -oh / 2 - 0.1 - 0.15 * pw / 1.1, 0.02);
+          fr.th = oh + 0.5; // frame + plaque
+          fr.dist = Math.max(ow / (2 * tn * camera.aspect), fr.th / (2 * tn)) * (port ? 1.16 : 1.55);
+          maxD = Math.max(maxD, fr.dist);
+        });
+        HX = Math.max(2.4, (maxD + 0.9) / 2);
+        wallL.position.set(-HX - 0.05, WH / 2, zMid); wallR.position.set(HX + 0.05, WH / 2, zMid);
+        floor.scale.x = ceil.scale.x = endWall.scale.x = HX * 2 + 0.2;
+        stripL.position.set(-HX + 0.01, 0.02, zMid); stripR.position.set(HX - 0.01, 0.02, zMid);
+        K = [{ x: 0, y: EY, z: 4.5, yaw: 0, pitch: 0 }];
+        frames.forEach(function (fr) {
+          var s = fr.side, fx = s * (HX - 0.04), cy = EY + 0.05;
+          fr.grp.position.set(fx, cy, fr.z);
+          fr.spot.position.set(s * (HX - 1.5), WH - 0.25, fr.z + 0.25); fr.tgt.position.set(fx, cy - 0.1, fr.z);
+          fr.fix.position.set(s * (HX - 1.5), WH - 0.11, fr.z + 0.25); fr.bulb.position.set(s * (HX - 1.5), WH - 0.225, fr.z + 0.25); fr.bulb.rotation.x = Math.PI / 2;
+          fr.pool.position.set(s * (HX - 0.9), 0.012, fr.z); fr.pool.scale.set(2.6, 3.4, 1);
+          var px = fx - s * fr.dist, pz = fr.z + 0.45, ly = cy + (camera.aspect < 0.8 ? -0.12 : 0.16), dx = fx - px, dz = fr.z - pz;
+          K.push({ x: px, y: EY, z: pz, yaw: Math.atan2(dx, -dz), pitch: Math.atan2(ly - EY, Math.hypot(dx, dz)) });
+        });
+        var dE = Math.max(3.2 / (2 * tn * camera.aspect), 1.9 / (2 * tn)) * 1.5;
+        K.push({ x: 0, y: EY, z: zEnd + Math.min(dE, GZ - 0.5), yaw: 0, pitch: 0 });
+      }
+      size(); onRealResize(size);
+
+      // ---- interaction: hover, click to enlarge
+      var ray = new THREE.Raycaster(), ndc = new THREE.Vector2(), hover = null, mx = 0, my = 0, tmx = 0, tmy = 0, on = false, S = 0, openI = -1, tmp = new THREE.Vector3(), lastCap = "", openY = 0;
+      function pick(e) {
+        var r = cv.getBoundingClientRect(); ndc.set((e.clientX - r.left) / r.width * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+        ray.setFromCamera(ndc, camera); var hit = ray.intersectObjects(pickables, false)[0];
+        return hit && hit.distance < 9 ? hit.object.userData.fr : null;
+      }
+      cv.addEventListener("pointermove", function (e) {
+        var r = cv.getBoundingClientRect(); tmx = (e.clientX - r.left) / r.width - 0.5; tmy = (e.clientY - r.top) / r.height - 0.5;
+        if (e.pointerType !== "mouse") return;
+        hover = pick(e); cv.style.cursor = hover ? "zoom-in" : "";
+      });
+      cv.addEventListener("pointerleave", function () { hover = null; tmx = tmy = 0; });
+      cv.addEventListener("click", function (e) { var fr = pick(e); if (fr) openBox(fr.i); });
+      srBtns.forEach(function (btn, i) { btn.addEventListener("click", function () { openBox(i); }); });
+      function stopY(i) { var top = sec.getBoundingClientRect().top + scrollY, span = sec.offsetHeight - innerHeight; return top + span * ((i + 1) / nSeg); }
+      function rectOf(fr) {
+        var x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
+        [[-0.5, -0.5], [0.5, -0.5], [0.5, 0.5], [-0.5, 0.5]].forEach(function (c) {
+          tmp.set(c[0], c[1], 0); fr.cert.localToWorld(tmp); tmp.project(camera);
+          var x = (tmp.x + 1) / 2 * W, y = (1 - tmp.y) / 2 * H; x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y);
+        });
+        return { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
+      }
+      function fromT(fr, F) { var I = rectOf(fr); return "translate(" + ((I.x + I.w / 2) - (F.x + F.w / 2)).toFixed(1) + "px," + ((I.y + I.h / 2) - (F.y + F.h / 2)).toFixed(1) + "px) scale(" + (I.w / F.w).toFixed(4) + "," + (I.h / F.h).toFixed(4) + ")"; }
+      var F = null;
+      function openBox(i) {
+        if (openI >= 0) return;
+        var y = stopY(i);
+        if (Math.abs(scrollY - y) > 30) {
+          scrollTo({ top: y, behavior: reduce ? "auto" : "smooth" });
+          var t0 = performance.now(); (function wait() { if (Math.abs(S - (i + 1)) < 0.03 || performance.now() - t0 > 1800) show(i); else requestAnimationFrame(wait); })();
+        } else show(i);
+      }
+      function show(i) {
+        if (openI >= 0) return;
+        var fr = frames[i], f = fr.f, top = 96, bot = 92, aw = W * 0.92, ah = Math.max(120, H - top - bot), w = aw, h = w / f.ar;
+        if (h > ah) { h = ah; w = h * f.ar; }
+        F = { x: (W - w) / 2, y: top + (ah - h) / 2, w: w, h: h };
+        openI = i; openY = scrollY;
+        boxImg.src = f.img; boxImg.alt = f.title + ", " + f.issuer + ", " + f.date;
+        boxImg.style.left = F.x + "px"; boxImg.style.top = F.y + "px"; boxImg.style.width = F.w + "px"; boxImg.style.height = F.h + "px";
+        boxImg.style.transition = "none"; boxImg.style.transform = fromT(fr, F);
+        boxCap.textContent = "// " + f.title.toLowerCase() + " · " + f.issuer.toLowerCase() + " · " + f.date.toLowerCase();
+        box.hidden = false; void box.offsetWidth; boxImg.style.transition = ""; box.classList.add("on"); boxImg.style.transform = "none";
+        closeBtn.tabIndex = 0; closeBtn.focus({ preventScroll: true });
+      }
+      function hide() {
+        if (openI < 0) return;
+        var fr = frames[openI]; openI = -1;
+        boxImg.style.transform = fromT(fr, F); box.classList.remove("on"); closeBtn.tabIndex = -1;
+        setTimeout(function () { if (openI < 0) box.hidden = true; }, 520);
+        if (document.activeElement === closeBtn) fr.f.btn.focus({ preventScroll: true });
+      }
+      box.addEventListener("click", hide);
+      addEventListener("keydown", function (e) { if (e.key === "Escape") hide(); });
+      addEventListener("scroll", function () { if (openI >= 0 && Math.abs(scrollY - openY) > 60) hide(); }, { passive: true });
+      function setCap(s) { if (s === lastCap) return; lastCap = s; cap.textContent = s; cap.classList.remove("swap"); void cap.offsetWidth; cap.classList.add("swap"); }
+
+      function frame(ts) {
+        var t = ts / 1000, r = sec.getBoundingClientRect(), span = Math.max(1, sec.offsetHeight - innerHeight), p = cl(-r.top / span);
+        S = p * nSeg;
+        var seg = Math.min(nSeg - 1, Math.floor(S)), q = S - seg, e = ease(q / 0.72), a = K[seg], b = K[seg + 1];
+        mx += (tmx - mx) * 0.06; my += (tmy - my) * 0.06;
+        var walk = Math.sin(e * Math.PI), bob = reduce ? 0 : Math.sin(S * 26) * 0.018 * walk;
+        camera.position.set(lerp(a.x, b.x, e), lerp(a.y, b.y, e) + bob, lerp(a.z, b.z, e));
+        camera.rotation.set(lerp(a.pitch, b.pitch, e) - my * 0.07, -(lerp(a.yaw, b.yaw, e) + mx * 0.12), 0);
+        // the lights come on as you get there
+        frames.forEach(function (fr) {
+          var lv = cl((S - fr.i - 0.06) / 0.3), fl = lv > 0 && lv < 1 && !reduce ? (Math.sin(t * 43 + fr.i) > -0.2 ? 1 : 0.25) : 1, L = ease(lv) * fl;
+          fr.lit = L; fr.spot.intensity = L * (dark() ? 62 : 30);
+          fr.certM.color.setScalar(0.05 + 0.95 * L); fr.bulb.material.color.setScalar(L);
+          fr.pool.material.opacity = L * (dark() ? 0.1 : 0.0);
+          fr.hov += ((fr === hover ? 1 : 0) - fr.hov) * 0.15;
+          var sc = 1 + fr.hov * 0.025; fr.grp.scale.set(sc, sc, 1);
+        });
+        var le = ease((S - N - 0.05) / 0.4); endLight.intensity = le * (dark() ? 9 : 4); endText.material.opacity = 0.05 + 0.95 * le;
+        // dust drifting through the corridor, around the camera
+        for (var i = 0; i < DN; i++) {
+          var sd = dseed[i];
+          dpos[i * 3] = (sd[0] - 0.5) * 2 * (HX - 0.2) + Math.sin(t * 0.2 + sd[3]) * 0.15;
+          dpos[i * 3 + 1] = ((sd[1] * WH + t * 0.035 * (0.4 + sd[2])) % WH);
+          dpos[i * 3 + 2] = camera.position.z + 2 - ((sd[2] * 14 + (4.5 - camera.position.z)) % 14);
+        }
+        dustG.attributes.position.needsUpdate = true;
+        renderer.render(scene, camera);
+        // HUD
+        var hv = 1 - cl((p * nSeg - 0.05) / 0.25);
+        head.style.opacity = hv.toFixed(3); head.style.transform = "translate3d(0," + (-30 * (1 - hv)).toFixed(1) + "px,0)";
+        var at = Math.round(S), close = Math.abs(S - at) < 0.3 || (q > 0.6);
+        var idx = q > 0.6 ? seg : (q < 0.08 ? seg - 1 : -2);
+        if (idx >= 0 && idx < N) { setCap("// " + frames[idx].f.issuer.toLowerCase() + " · " + frames[idx].f.date.toLowerCase() + " — click to enlarge"); countEl.textContent = pad(idx + 1) + " / " + pad(N); }
+        else if (S < 0.08) { setCap("// scroll to walk in"); countEl.textContent = pad(0) + " / " + pad(N); }
+        else if (seg >= N && q > 0.5) { setCap("// to be continued"); countEl.textContent = pad(N) + " / " + pad(N); }
+        else setCap("// keep walking");
+      }
+      if ("IntersectionObserver" in window) new IntersectionObserver(function (en) { on = en[0].isIntersecting; if (!on) hide(); }, { rootMargin: "60px 0px" }).observe(sec); else on = true;
+      cv.__snap = function () { frame(performance.now()); return cv; };
+      sec.dispatchEvent(new Event("snap-ready"));
+      (function loop(ts) { if (on) frame(ts || performance.now()); requestAnimationFrame(loop); })();
     }
-    function close() {
-      if (!current || busy) return;
-      busy = true; clearT();
-      var b = current;
-      bk.classList.remove("open");
-      bk.style.transform = "translate3d(0,0,0) rotateX(8deg) rotateY(-14deg)";
-      later(function () { ov.classList.remove("on"); bk.style.transform = fromShelf(b); }, reduce ? 20 : 900);
-      later(function () { b.classList.remove("out"); ov.hidden = true; current = null; busy = false; b.focus({ preventScroll: true }); }, reduce ? 40 : 1850);
-    }
-    books.forEach(function (b) { b.addEventListener("click", function () { open(b); }); });
-    ov.addEventListener("click", function (e) { if (!e.target.closest(".bk") || e.target.closest(".bk-close")) close(); });
-    bk.addEventListener("click", function (e) { e.stopPropagation(); if (!busy && current) close(); });
-    addEventListener("keydown", function (e) { if (e.key === "Escape") close(); });
   })();
 
   /* ---------- Giant name: letters run from the cursor ---------- */

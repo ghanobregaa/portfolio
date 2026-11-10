@@ -26,8 +26,8 @@ export default function App() {
         <Morph />
         <About />
         <Experience />
-        <Certificates />
         <Work />
+        <Certificates />
         <Stack />
         <Playground />
         <Contact />
