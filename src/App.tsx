@@ -14,12 +14,15 @@ import { Contact } from "@/components/sections/Contact";
 import { Footer } from "@/components/layout/Footer";
 import { Toast } from "@/components/layout/Toast";
 import { Analytics } from "@vercel/analytics/react"
+import { SpeedInsights } from '@vercel/speed-insights/react';
+
 
 export default function App() {
   useEffect(() => startEngine(), []);
 
   return (
     <>
+      <SpeedInsights />
       <Analytics />
       <Overlays />
       <Nav />
