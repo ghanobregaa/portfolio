@@ -613,13 +613,36 @@ export function startEngine(): void {
       [["export default", "k"], [" build", "t"], ["({ ", "p"], ["fullStack", "t"], [": ", "p"], ["true", "s"], [" });", "p"]]
     ];
     // where each stack settles, in world units around the laptop
-    var TGT = [[-2.1, 1.7, 0.3], [2.15, 1.55, 0.1], [-2.3, 0.75, 0.8], [2.35, 0.85, 0.7], [-1.45, 2.2, -0.4],
-      [1.5, 2.25, -0.5], [-1.95, 0.15, 1.2], [2.0, 0.2, 1.1], [0, 2.4, -0.6], [0.25, 0.05, 1.5]];
+    var TGT = [[-2.3, 1.75, 0.3], [2.35, 1.6, 0.1], [-2.5, 0.75, 0.8], [2.55, 0.85, 0.7], [-1.75, 2.4, -0.4],
+      [1.8, 2.45, -0.5], [-2.15, 0.05, 1.2], [2.2, 0.1, 1.1], [0, 2.65, -0.6], [0.3, -0.15, 1.5]];
+    // each tool leaves the screen as a tiny piece of what it makes: a response, a query, a component...
+    var CARD = {
+      "Python": ["python", "$ python sync.py", "✓ done · 0.8s"],
+      "Flask": ["flask", "GET /api/health", "200 OK · 12 ms"],
+      "ReactJS": ["react", "<Toggle on />", "ui"],
+      "JavaScript": ["js", "[1, 2, 3].map(n => n * 2)", "→ [2, 4, 6]"],
+      "Flutter": ["flutter", "$ flutter build apk", "✓ app-release.apk"],
+      "MySQL": ["mysql", "SELECT COUNT(*) FROM users;", "→ 1 204 rows"],
+      "API REST": ["rest", "POST /v1/items", "201 Created"],
+      "HTML": ["html", "<h1>Hello</h1>", "Hello"],
+      "CSS": ["css", "--accent: #f7a8a9;", "swatch"],
+      "Tailwind CSS": ["tailwind", 'class="flex gap-4"', "flex"]
+    };
+    function escC(s) { return s.replace(/&/g, "&amp;").replace(/</g, "&lt;"); }
+    function cardHTML(name) {
+      var d = CARD[name] || [name.toLowerCase(), name, ""], r = d[2], out;
+      if (r === "ui") out = '<span class="lc-ui"><i></i></span>';
+      else if (r === "swatch") out = '<span class="lc-sw"><i></i><i></i><i></i></span>';
+      else if (r === "flex") out = '<span class="lc-fx"><i></i><i></i><i></i></span>';
+      else if (r === "Hello") out = '<span class="lc-h1">Hello</span>';
+      else out = '<span class="lc-out">' + escC(r) + "</span>";
+      return '<span class="lc-bar"><i></i><i></i><i></i><em>' + d[0] + '</em></span><span class="lc-in">' + escC(d[1]) + "</span>" + out;
+    }
     var total0 = 0, chips = [], ci = 0;
     L.forEach(function (line) { line.s = total0; line.forEach(function (tk) {
       tk.start = total0; total0 += tk[0].length;
       if (tk[2]) {
-        var c = document.createElement("span"); c.className = "lp-chip"; c.textContent = tk[2]; chipsEl.appendChild(c);
+        var c = document.createElement("span"); c.className = "lp-chip"; c.innerHTML = cardHTML(tk[2]); c.setAttribute("aria-label", tk[2]); chipsEl.appendChild(c);
         var o = { el: c, tok: tk, at: tk.start + tk[0].length, tg: TGT[ci++], ph: Math.random() * 6.28, hl: 0 };
         c.addEventListener("click", function () { o.hl = performance.now(); c.classList.remove("hit"); void c.offsetWidth; c.classList.add("hit"); setTimeout(function () { c.classList.remove("hit"); }, 1200); });
         chips.push(o);
@@ -897,7 +920,9 @@ export function startEngine(): void {
         over.style.width = lerp(rw, W, gk).toFixed(2) + "px"; over.style.height = lerp(rh, H, gk).toFixed(2) + "px";
         over.style.borderRadius = (10 * (1 - eb)).toFixed(2) + "px";
         view.style.transform = "translate(-50%,-50%) scale(" + fitS.toFixed(5) + ")";
+
       } else {
+
         if (view.parentNode !== app) app.insertBefore(view, app.firstChild);
         over.style.display = "none";
         view.style.transform = "translate(-50%,-50%) scale(" + Math.min(SW / innerWidth, SH / innerHeight).toFixed(5) + ")";
@@ -911,7 +936,13 @@ export function startEngine(): void {
         var pos = C.clone().lerp(tmp2, ae), q = project(pos), dist = camera.position.distanceTo(pos), s = cl(7 / dist) * (0.4 + 0.6 * ae);
         c.el.style.visibility = fade > 0.01 && e > 0 ? "visible" : "hidden";
         c.el.style.opacity = (Math.min(1, e * 3) * fade).toFixed(2);
-        c.el.style.transform = "translate(" + q[0].toFixed(1) + "px," + q[1].toFixed(1) + "px) translate(-50%,-50%) rotate(" + ((1 - e) * 120).toFixed(1) + "deg) scale(" + s.toFixed(3) + ")";
+        // keep every card inside the view, below the nav and above the caption
+        if (small) s *= 1.3;
+        if (!c.w) { c.w = c.el.offsetWidth; c.h = c.el.offsetHeight; }
+        var hw = c.w * s / 2 + 12, hh = c.h * s / 2 + 10, topB = (navEl ? Math.max(0, navEl.getBoundingClientRect().bottom - sticky.getBoundingClientRect().top) : 0) + hh;
+        var qx = Math.max(hw, Math.min(W - hw, q[0])), qy = Math.max(topB, Math.min(H - 44 - hh, q[1]));
+        qx = q[0] + (qx - q[0]) * ae; qy = q[1] + (qy - q[1]) * ae;
+        c.el.style.transform = "translate(" + qx.toFixed(1) + "px," + qy.toFixed(1) + "px) translate(-50%,-50%) rotate(" + ((1 - e) * 120).toFixed(1) + "deg) scale(" + s.toFixed(3) + ")";
       });
       head.style.transform = "translate3d(" + (mx * -16).toFixed(1) + "px," + (-36 * (1 - hv)).toFixed(1) + "px,0)";
       head.style.opacity = hv.toFixed(3);
@@ -1306,7 +1337,7 @@ export function startEngine(): void {
   (function () {
     var sec = document.getElementById("morph"), cv = document.getElementById("morph-cv"), cx = cv.getContext("2d");
     var mcs = document.querySelectorAll("#mc-stack .mc"), mcI = document.getElementById("mc-i"), mcBar = document.getElementById("mc-bar");
-    var S = 420, N = (window.innerWidth < 600 ? 1900 : 3000), shapes = [], P = [];
+    var S = 420, N = (window.innerWidth < 600 ? 3200 : 5200), shapes = [], P = [];
     var off = document.createElement("canvas"); off.width = S; off.height = S;
     var o = off.getContext("2d", { willReadFrequently: true });
     var TA = new Float32Array(N * 2), TB = new Float32Array(N * 2);
@@ -1552,12 +1583,20 @@ export function startEngine(): void {
       P.push({ x: ox + TA[2 * i] * scale + (Math.random() - 0.5) * W, y: oy + TA[2 * i + 1] * scale + (Math.random() - 0.5) * H, vx: 0, vy: 0, ph: Math.random() * 6.28, th: 0.08 + Math.random() * 0.84 });
     }
     var mx = -9999, my = -9999, progress = 0, stageF = 0, shown = -1, on = !("IntersectionObserver" in window), col = {};
-    function colors() { var c = getComputedStyle(root); col.fg = c.getPropertyValue("--fg").trim(); col.ac = c.getPropertyValue("--accent").trim(); }
+    function colors() { var c = getComputedStyle(root); col.fg = c.getPropertyValue("--fg").trim(); col.ac = c.getPropertyValue("--accent").trim(); col.bg = c.getPropertyValue("--bg").trim() || "#000"; }
     colors();
-    cv.addEventListener("pointermove", function (e) { var r = cv.getBoundingClientRect(); mx = e.clientX - r.left; my = e.clientY - r.top; });
+    cv.addEventListener("pointermove", function (e) {
+      var r = cv.getBoundingClientRect(); mx = e.clientX - r.left; my = e.clientY - r.top;
+      // moving over the sea leaves a wake of small rings
+      var nt = performance.now();
+      if (gForm < 1 && !reduce && nt - lastRip > 120) { lastRip = nt; ripples.push({ sx: mx, sy: my, t0: nt, a: 0.32 }); if (ripples.length > 16) ripples.shift(); }
+    });
     cv.addEventListener("pointerleave", function () { mx = my = -9999; });
+    var ripples = [], gForm = 0, lastRip = 0;
     cv.addEventListener("pointerdown", function (e) {
       var r = cv.getBoundingClientRect(), px = e.clientX - r.left, py = e.clientY - r.top;
+      // on the sea, a click drops a stone: a big ring runs across the surface
+      if (gForm < 1 && !reduce) { ripples.push({ sx: px, sy: py, t0: performance.now(), a: 1 }); return; }
       P.forEach(function (p) {
         var dx = p.x - px, dy = p.y - py, d = Math.hypot(dx, dy) || 1, f = Math.max(0, 1 - d / 420) * 38;
         p.vx += dx / d * f + (Math.random() - 0.5) * 6; p.vy += dy / d * f + (Math.random() - 0.5) * 6;
@@ -1585,18 +1624,43 @@ export function startEngine(): void {
     }
     var target = -1, prevStage = 0, switchAt = -1e9, PRE = 0.14;
     addEventListener("scroll", readScroll, { passive: true }); readScroll();
-    // galaxy: each dot sits on one of three spiral arms (or in the bright core)
+    // the intro: a calm sea of dots seen in perspective. It breathes on its own,
+    // a soft swell follows the cursor, moving leaves a wake, a click sends a ring across it
+    var GX = Math.round(Math.sqrt(N * 3.1)), GY = Math.ceil(N / GX);
     P.forEach(function (p, i) {
-      var core = Math.random() < 0.16;
-      p.gr = core ? Math.abs((Math.random() + Math.random() + Math.random() - 1.5) / 1.5) * 0.12 : 0.06 + Math.pow(Math.random(), 0.75) * 0.94;
-      p.ga = core ? Math.random() * 6.283 : (i % 3) * 2.094 + p.gr * 5.2 + (Math.random() - 0.5) * (0.75 - p.gr * 0.3);
-      p.gz = (Math.random() - 0.5) * 0.05 * (1 - p.gr);
+      var row = Math.floor(i / GX);
+      // alternate rows sit half a step apart, so the far water never lines up into stripes
+      p.su = ((i % GX) + (row % 2 ? 0.5 : 0)) / GX * 2 - 1; p.sv = row / Math.max(1, GY - 1);
     });
     var capEl = sec.querySelector(".morph-cap"), lastCapO = -1;
     var fr = 0, asleep = true, lastVis = -1, uiBits = Array.prototype.slice.call(sec.querySelectorAll(".morph-hint"));
+    var hint2 = sec.querySelector(".morph-hint span:last-child"), hintSea = null;
+    var HOR = 0.26, CAMY = 0.7, rp = [], hillX = 0, hillZ = 3, hillA = 0;
+    function toSea(sx, sy) {
+      // screen point -> point on the sea (world x, depth z)
+      var fv = H * 0.72, hz = H * HOR, dy = Math.max(6, sy - hz), z = Math.min(5.4, Math.max(1, CAMY * fv / dy));
+      return [(sx - W / 2) / (W * 0.56) * z * 1.1, z];
+    }
+    function seaAt(p, time) {
+      var z = 1 + (1 - p.sv) * 4.4, x = p.su * z * 1.1, fv = H * 0.72;
+      var y = 0.06 * Math.sin(x * 2.1 + time * 0.8) + 0.05 * Math.sin(z * 2.6 - time * 1.15 + x * 0.6) + 0.02 * Math.sin((x - z) * 5.3 + time * 1.9);
+      var hot = 0;
+      for (var k = 0; k < rp.length; k++) {
+        var r = rp[k], d = Math.hypot(x - r.x, (z - r.z) * 1.15), front = r.age * 1.35, e = d - front;
+        if (e > 0.6 || e < -1.4) continue;
+        var w = r.a * Math.exp(-r.age * 0.85) * Math.exp(-e * e * 9) * 0.16;
+        y += w; hot += w;
+      }
+      if (hillA > 0.001) { var hd = (x - hillX) * (x - hillX) + (z - hillZ) * (z - hillZ) * 1.3; y += 0.1 * hillA * Math.exp(-hd * 2.4); }
+      p.wx = W / 2 + p.su * W * 0.56;
+      p.wy = H * HOR + (CAMY - y) * fv / z;
+      var near = 1 - (z - 1) / 4.4, edge = 1 - Math.pow(Math.abs(p.su), 6);
+      p.wd = Math.max(0, (0.16 + 0.84 * near * near) * edge * (1 + y * 3.5));
+      p.hot = hot > 0.022;
+    }
     function scatter() {
-      // everything starts in the core; the galaxy unfolds from there
-      for (var i = 0; i < N; i++) { var p = P[i]; p.x = ox + (Math.random() - 0.5) * 6; p.y = oy + (Math.random() - 0.5) * 4; p.vx = p.vy = 0; }
+      var t0 = performance.now() / 1000;
+      for (var i = 0; i < N; i++) { var p = P[i]; seaAt(p, t0); p.x = p.wx; p.y = p.wy; p.vx = p.vy = 0; }
     }
     scatter();
     (function loop(ts) {
@@ -1617,33 +1681,54 @@ export function startEngine(): void {
         if (switching) shapes[prevStage].evalAll(time, TA);
         cx.clearRect(0, 0, W, H);
         cx.fillStyle = col.fg;
-        var form = reduce ? 1 : Math.min(1, progress / PRE);
+        var form = reduce ? 1 : Math.min(1, progress / PRE); gForm = form;
+        var gal = form < 1, nowT = performance.now();
+        if (hint2 && hintSea !== gal) { hintSea = gal; hint2.textContent = gal ? "move to make waves · click to splash" : "move to scatter · click to explode"; }
+        if (gal) {
+          // rings in sea coordinates, oldest dropped once they have faded
+          rp.length = 0;
+          for (var q = ripples.length - 1; q >= 0; q--) {
+            var rr0 = ripples[q], age = (nowT - rr0.t0) / 1000;
+            if (age > 4.5) { ripples.splice(q, 1); continue; }
+            if (rr0.x === undefined) { var w0 = toSea(rr0.sx, rr0.sy); rr0.x = w0[0]; rr0.z = w0[1]; }
+            rp.push({ x: rr0.x, z: rr0.z, age: age, a: rr0.a });
+          }
+          var hasM = mx > -9000 && my > H * HOR;
+          hillA += ((hasM ? 1 : 0) - hillA) * 0.06;
+          if (hasM) { var hw = toSea(mx, my); hillX += (hw[0] - hillX) * 0.12; hillZ += (hw[1] - hillZ) * 0.12; }
+        }
+        var hots = [];
         var capO = vis * Math.max(0, Math.min(1, (form - 0.7) / 0.3));
         if (Math.abs(capO - lastCapO) > 0.01 && capEl) { lastCapO = capO; capEl.style.opacity = capO.toFixed(3); }
         for (var i = 0; i < N; i++) {
           var p = P[i], T = switching && since < p.th * 260 ? TA : TB, tx = ox + T[2 * i] * scale, ty = oy + T[2 * i + 1] * scale, depth = 1;
-          // still a galaxy? blend from the spiral to the shape, each dot at its own moment
+          // still the sea? blend from the surface to the shape, each dot at its own moment
           var fi = form >= 1 ? 1 : ease(Math.max(0, Math.min(1, form * 1.45 - p.th * 0.45)));
           if (fi < 1) {
-            // inner stars orbit faster; the disc is tilted so it reads in 3D
-            var grow = ease(Math.max(0, Math.min(1, (vis - p.gr * 0.35) / 0.65)));
-            var ang = p.ga + time * (0.18 + 0.5 / (0.25 + p.gr * 3)) - (1 - grow) * 2.4, rad = p.gr * 0.72 * scale * grow;
-            var gx0 = Math.cos(ang) * rad, gy0 = Math.sin(ang) * rad, tilt = 0.42, rot = -0.35;
-            var wx = ox + gx0 * Math.cos(rot) - gy0 * tilt * Math.sin(rot), wy = oy + gx0 * Math.sin(rot) + gy0 * tilt * Math.cos(rot) + p.gz * scale;
-            depth = (0.5 + 0.5 * (Math.sin(ang) + 1) / 2) * (p.gr < 0.13 ? 1.15 : 1 - p.gr * 0.35);
-            tx = wx + (tx - wx) * fi; ty = wy + (ty - wy) * fi; depth = depth + (1 - depth) * fi;
+            // the sea holds until the scroll pulls each dot into the next figure
+            seaAt(p, time);
+            tx = p.wx + (tx - p.wx) * fi; ty = p.wy + (ty - p.wy) * fi; depth = p.wd + (1 - p.wd) * fi;
           }
-          if (!reduce) { tx += Math.sin(time * 1.3 + p.ph) * 1.4; ty += Math.cos(time * 1.1 + p.ph) * 1.4; }
+          if (!reduce) { var wob = fi < 1 ? 1.4 * fi : 1.4; tx += Math.sin(time * 1.3 + p.ph) * wob; ty += Math.cos(time * 1.1 + p.ph) * wob; }
           var dx = p.x - mx, dy = p.y - my, d2 = dx * dx + dy * dy;
-          if (d2 < 9000) { var d = Math.sqrt(d2) || 1, push = (1 - d / 95) * 3.2; p.vx += dx / d * push; p.vy += dy / d * push; }
+          if (fi > 0.5 && d2 < 9000) { var d = Math.sqrt(d2) || 1, push = (1 - d / 95) * 3.2; p.vx += dx / d * push; p.vy += dy / d * push; }
           if (reduce) { p.x = tx; p.y = ty; }
           else {
             p.vx += (tx - p.x) * 0.13; p.vy += (ty - p.y) * 0.13;
             p.vx *= 0.72; p.vy *= 0.72; p.x += p.vx; p.y += p.vy;
           }
-          var gx2 = Math.round(p.x / 3) * 3, gy2 = Math.round(p.y / 3) * 3, sp = Math.min(1, Math.hypot(p.vx, p.vy) / 6);
-          cx.globalAlpha = (0.8 + 0.2 * (1 - sp)) * vis * depth;
-          cx.beginPath(); cx.arc(gx2, gy2, (1.05 + sp * 0.45) * (0.7 + 0.3 * depth), 0, 6.283); cx.fill();
+          var snap = fi > 0.6, gx2 = snap ? Math.round(p.x / 3) * 3 : p.x, gy2 = snap ? Math.round(p.y / 3) * 3 : p.y, sp = Math.min(1, Math.hypot(p.vx, p.vy) / 6);
+          if (depth <= 0.01) continue;
+          var al = Math.min(1, (0.8 + 0.2 * (1 - sp)) * vis * depth), rad2 = (1.05 + sp * 0.45) * (0.55 + 0.45 * Math.min(1.3, depth));
+          if (p.hot && fi < 0.5) { hots.push(gx2, gy2, al, rad2); continue; }
+          cx.globalAlpha = al;
+          cx.beginPath(); cx.arc(gx2, gy2, rad2, 0, 6.283); cx.fill();
+        }
+        // the crest of each ring catches the light in pink
+        if (hots.length) {
+          cx.fillStyle = col.ac;
+          for (var hI = 0; hI < hots.length; hI += 4) { cx.globalAlpha = hots[hI + 2]; cx.beginPath(); cx.arc(hots[hI], hots[hI + 1], hots[hI + 3] * 1.15, 0, 6.283); cx.fill(); }
+          cx.fillStyle = col.fg;
         }
         cx.globalAlpha = 1;
       }
@@ -1670,7 +1755,7 @@ export function startEngine(): void {
   /* ---------- Contact: pink dots fall and pile up (Strike-style) ---------- */
   (function () {
     var card = document.getElementById("sand-card"), cv = document.getElementById("sand"), c = cv.getContext("2d");
-    var CELL = 7, cols = 0, rows = 0, grid = null, W = 0, H = 0, dpr = 1, on = false, ac = "#f7a8a9", spawnRate = 2.2, filling = true, fade = 1;
+    var CELL = 5, cols = 0, rows = 0, grid = null, W = 0, H = 0, dpr = 1, on = false, ac = "#f7a8a9", spawnRate = 4.5, filling = true, fade = 1;
     function readAc() { ac = getComputedStyle(root).getPropertyValue("--accent").trim() || ac; }
     function size() {
       dpr = Math.min(2, window.devicePixelRatio || 1); W = card.clientWidth; H = card.clientHeight;
@@ -1918,7 +2003,7 @@ export function startEngine(): void {
   (function () {
     var sec = document.getElementById("certificates"), cv = document.getElementById("gl-cv");
     if (!sec || !cv) return;
-    var sticky = sec.querySelector(".gl-sticky"), head = sec.querySelector(".gl-head"), cap = document.getElementById("gl-cap"), countEl = document.getElementById("gl-count");
+    var sticky = sec.querySelector(".gl-sticky"), head = sec.querySelector(".gl-head"), foot = sec.querySelector(".gl-foot"), cap = document.getElementById("gl-cap"), countEl = document.getElementById("gl-count");
     var box = document.getElementById("gl-box"), boxImg = document.getElementById("gl-img"), boxCap = document.getElementById("gl-boxcap"), closeBtn = document.getElementById("gl-close");
     var srBtns = Array.prototype.slice.call(sec.querySelectorAll(".bs-real"));
     var N = srBtns.length, nSeg = N + 1;
@@ -2000,7 +2085,7 @@ export function startEngine(): void {
         cert.userData.fr = fr; mat.userData.fr = fr; pickables.push(cert, mat); frames.push(fr);
       });
       // dust in the light
-      var DN = 160, dpos = new Float32Array(DN * 3), dseed = [];
+      var DN = 420, dpos = new Float32Array(DN * 3), dseed = [];
       for (var d = 0; d < DN; d++) dseed.push([Math.random(), Math.random(), Math.random(), Math.random() * 6.28]);
       var dustG = new THREE.BufferGeometry(); dustG.setAttribute("position", new THREE.BufferAttribute(dpos, 3));
       var dust = new THREE.Points(dustG, new THREE.PointsMaterial({ color: 0xffffff, size: 0.022, transparent: true, opacity: 0.35, depthWrite: false })); scene.add(dust);
@@ -2139,7 +2224,7 @@ export function startEngine(): void {
         dustG.attributes.position.needsUpdate = true;
         renderer.render(scene, camera);
         // HUD
-        var hv = 1 - cl((p * nSeg - 0.05) / 0.25);
+        var hv = 1 - cl((S - 0.05) / 0.25);
         head.style.opacity = hv.toFixed(3); head.style.transform = "translate3d(0," + (-30 * (1 - hv)).toFixed(1) + "px,0)";
         var at = Math.round(S), close = Math.abs(S - at) < 0.3 || (q > 0.6);
         var idx = q > 0.6 ? seg : (q < 0.08 ? seg - 1 : -2);
@@ -2197,7 +2282,7 @@ export function startEngine(): void {
   }
   function makeStars() {
     stars = [];
-    var n = Math.round(W * H / 9000);
+    var n = Math.round(W * H / 4200);
     for (var i = 0; i < n; i++) stars.push({ x: Math.random() * W, y: Math.random() * H, r: 0.35 + Math.random() * 0.8, z: 0.3 + Math.random() * 0.7, ph: Math.random() * 6.28, sp: 0.6 + Math.random() * 1.6 });
   }
   var hole = null;
@@ -2288,7 +2373,7 @@ export function startEngine(): void {
     if (heroVisible && W) {
       var storm = now < eggUntil;
       boost += ((storm ? 8 : 1) - boost) * 0.05;
-      spawnAcc += dt * 0.9 * boost;
+      spawnAcc += dt * 1.7 * boost;
       while (spawnAcc > 1) { spawnAcc -= 1; spawn(false, storm && Math.random() < 0.6); }
       drawFrame(now / 1000, dt * (storm ? 2 : 1));
     }
