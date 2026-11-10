@@ -13,12 +13,14 @@ import { Playground } from "@/components/sections/Playground";
 import { Contact } from "@/components/sections/Contact";
 import { Footer } from "@/components/layout/Footer";
 import { Toast } from "@/components/layout/Toast";
+import { Analytics } from "@vercel/analytics/next"
 
 export default function App() {
   useEffect(() => startEngine(), []);
 
   return (
     <>
+      <Analytics />
       <Overlays />
       <Nav />
       <main id="top">
@@ -26,8 +28,8 @@ export default function App() {
         <Morph />
         <About />
         <Experience />
-        <Work />
         <Certificates />
+        <Work />
         <Stack />
         <Playground />
         <Contact />
