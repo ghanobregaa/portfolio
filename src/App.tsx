@@ -13,7 +13,7 @@ import { Playground } from "@/components/sections/Playground";
 import { Contact } from "@/components/sections/Contact";
 import { Footer } from "@/components/layout/Footer";
 import { Toast } from "@/components/layout/Toast";
-import { Analytics } from "@vercel/analytics/next"
+import { Analytics } from "@vercel/analytics/react"
 
 export default function App() {
   useEffect(() => startEngine(), []);
