@@ -7,12 +7,8 @@
     <meta name="theme-color" content="#000000" />
     <title>Guilherme Nóbrega</title>
     <script>
-      // Dark by default; a saved choice from the theme toggle wins. Runs before paint to avoid a flash.
-      (function () {
-        var t = null;
-        try { t = localStorage.getItem("theme"); } catch (e) {}
-        document.documentElement.setAttribute("data-theme", t === "light" ? "light" : "dark");
-      })();
+      // Always opens in dark mode. Runs before paint to avoid a flash.
+      document.documentElement.setAttribute("data-theme", "dark");
     </script>
     <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -21,8 +17,8 @@
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&family=Geist+Mono:wght@400;500&family=IBM+Plex+Mono:wght@300;400;500&display=swap"
     />
-    <script type="module" crossorigin src="./assets/index-DigQ1U4f.js"></script>
-    <link rel="stylesheet" crossorigin href="./assets/index-mXEs7Kyy.css">
+    <script type="module" crossorigin src="./assets/index-yGJ5jZeR.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-CYaI0B_X.css">
   </head>
   <body>
     <div id="root"></div>
