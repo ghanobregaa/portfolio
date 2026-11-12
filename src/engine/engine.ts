@@ -1244,7 +1244,7 @@ export function startEngine(): void {
     var PAL = [[248, 232, 233], [236, 166, 171], [150, 72, 82], [40, 18, 22]], PC = PAL.map(function (c) { return "rgb(" + c.join(",") + ")"; });
     var FONT = '"Press Start 2P", monospace';
     var touch = matchMedia("(hover: none)").matches, still = matchMedia("(prefers-reduced-motion: reduce)").matches;
-    var on = false, engaged = false, visible = false, state = "off", tState = 0, sel = 0, toast = "", toastT = 0, sound = true, raf = 0, last = 0;
+    var onLcd = null, hit3d = null, is3d = false, on = false, engaged = false, visible = false, state = "off", tState = 0, sel = 0, toast = "", toastT = 0, sound = true, raf = 0, last = 0;
     var stDot = document.getElementById("gb-state"), stT = document.getElementById("gb-state-t"), sndBtn = document.getElementById("gb-sound");
     var age = (document.getElementById("age") || {}).textContent || "26", xp = Math.max(1, new Date().getFullYear() - 2021);
     var best = 0; try { best = +localStorage.getItem("gn-snake") || 0; } catch (e) {}
@@ -1388,7 +1388,7 @@ export function startEngine(): void {
       tState += dt; C.imageSmoothingEnabled = false;
       DRAW[state](tState, dt);
       if (toast && toastT > 0) { toastT -= dt; frame(18, 56, 124, 26, 3); T(toast, 80, 65, 3, 8, "center"); }
-      snap();
+      snap(); if (onLcd) onLcd();
       if (state === "boot" && tState > 2.6) go("menu");
     }
     function loop(ts) {
@@ -1450,15 +1450,15 @@ export function startEngine(): void {
     }
     // the on-screen buttons
     var BTN = {}; Array.prototype.forEach.call(dev.querySelectorAll("[data-k]"), function (b) { BTN[b.dataset.k] = b; });
-    function flash(k) { var b = BTN[k]; if (!b) return; b.classList.add("down-k"); clearTimeout(b._t); b._t = setTimeout(function () { b.classList.remove("down-k"); }, 120); }
+    function flash(k) { if (hit3d) hit3d(k, 0.13); var b = BTN[k]; if (!b) return; b.classList.add("down-k"); clearTimeout(b._t); b._t = setTimeout(function () { b.classList.remove("down-k"); }, 120); }
     Array.prototype.forEach.call(dev.querySelectorAll("[data-k]"), function (b) {
       b.addEventListener("pointerdown", function (e) { e.preventDefault(); engaged = true; setStatus(); press(b.dataset.k); if (navigator.vibrate && touch) navigator.vibrate(8); });
     });
     document.getElementById("gb-power").addEventListener("click", function () { engaged = true; power(!on); });
     document.getElementById("gb-hint").addEventListener("click", function () { engaged = true; power(true); });
     sndBtn.addEventListener("click", function () { sound = !sound; sndBtn.textContent = sound ? "sound on" : "sound off"; sndBtn.setAttribute("aria-pressed", sound); if (sound) blip(); });
-    dev.addEventListener("pointerdown", function () { if (!engaged) { engaged = true; setStatus(); } });
-    document.addEventListener("pointerdown", function (e) { if (engaged && !dev.contains(e.target) && !e.target.closest(".gbs-status")) { engaged = false; setStatus(); } });
+    stage.addEventListener("pointerdown", function () { if (!engaged) { engaged = true; setStatus(); } });
+    document.addEventListener("pointerdown", function (e) { if (engaged && !stage.contains(e.target) && !e.target.closest(".gbs-status")) { engaged = false; setStatus(); } });
     var KEYS = { ArrowUp: "up", KeyW: "up", ArrowDown: "down", KeyS: "down", ArrowLeft: "left", KeyA: "left", ArrowRight: "right", KeyD: "right", Enter: "a", KeyP: "a", Backspace: "b", KeyL: "b", Escape: "b", Space: "start", ShiftLeft: "select", ShiftRight: "select" };
     var kbds = sec.querySelectorAll(".gbs-keys kbd"), KBD = { up: 0, down: 1, left: 2, right: 3, a: 4, b: 5, start: 6 };
     addEventListener("keydown", function (e) {
@@ -1473,13 +1473,228 @@ export function startEngine(): void {
       visible = en[0].isIntersecting;
       if (!visible && state === "snake" && sn && !sn.over) sn.paused = true;
       kick();
-    }, { threshold: 0.2 }).observe(dev); else visible = true;
+    }, { threshold: 0.15 }).observe(stage); else visible = true;
     // the console leans toward the cursor
     if (!touch && !still) {
-      stage.addEventListener("pointermove", function (e) { var r = dev.getBoundingClientRect(), x = (e.clientX - r.left) / r.width - 0.5, y = (e.clientY - r.top) / r.height - 0.5; dev.style.transform = "rotateY(" + (x * 10).toFixed(2) + "deg) rotateX(" + (-y * 8).toFixed(2) + "deg)"; });
+      stage.addEventListener("pointermove", function (e) { if (is3d) return; var r = dev.getBoundingClientRect(), x = (e.clientX - r.left) / r.width - 0.5, y = (e.clientY - r.top) / r.height - 0.5; dev.style.transform = "rotateY(" + (x * 10).toFixed(2) + "deg) rotateX(" + (-y * 8).toFixed(2) + "deg)"; });
       stage.addEventListener("pointerleave", function () { dev.style.transform = ""; });
     }
     setStatus();
+
+    // ---- the real thing: the console as a three.js model. The 2D canvas above becomes its screen.
+    var gl3 = document.getElementById("gb-gl");
+    if (!gl3) return;
+    var started3 = false;
+    function go3() { if (started3) return; started3 = true; loadThree().then(build3).catch(function () { gl3.style.display = "none"; }); }
+    if ("IntersectionObserver" in window) { var near3 = new IntersectionObserver(function (en) { if (en[0].isIntersecting) { near3.disconnect(); go3(); } }, { rootMargin: "120% 0px" }); near3.observe(sec); } else go3();
+
+    function build3(mod) {
+      var THREE = mod.THREE, RoomEnvironment = mod.RoomEnvironment, renderer;
+      try { renderer = new THREE.WebGLRenderer({ canvas: gl3, antialias: true, alpha: true }); } catch (e) { gl3.style.display = "none"; return; }
+      renderer.setClearColor(0, 0); renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.0;
+      var scene = new THREE.Scene(), camera = new THREE.PerspectiveCamera(26, 1, 0.1, 50);
+      var pmrem = new THREE.PMREMGenerator(renderer); scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+      var key = new THREE.DirectionalLight(0xffffff, 1.9); key.position.set(3, 4, 6); scene.add(key);
+      var fillL = new THREE.DirectionalLight(0xffffff, 0.35); fillL.position.set(-4, -1, 4); scene.add(fillL);
+      var rim = new THREE.DirectionalLight(0xf7a8a9, 1.6); rim.position.set(-3, 2.5, -4); scene.add(rim);
+      scene.add(new THREE.HemisphereLight(0xffffff, 0x18181b, 0.35));
+      var css = getComputedStyle(root), SANS = (css.getPropertyValue("--sans") || "sans-serif").trim(), MONO = (css.getPropertyValue("--mono") || "monospace").trim();
+
+      function shape4(w, h, r) { // rounded rect, r = [tl, tr, br, bl]
+        var s = new THREE.Shape(), x = -w / 2, y = -h / 2;
+        s.moveTo(x + r[3], y); s.lineTo(x + w - r[2], y); s.quadraticCurveTo(x + w, y, x + w, y + r[2]);
+        s.lineTo(x + w, y + h - r[1]); s.quadraticCurveTo(x + w, y + h, x + w - r[1], y + h);
+        s.lineTo(x + r[0], y + h); s.quadraticCurveTo(x, y + h, x, y + h - r[0]); s.lineTo(x, y + r[3]); s.quadraticCurveTo(x, y, x + r[3], y); return s;
+      }
+      function rr(w, h, r) { return shape4(w, h, [r, r, r, r]); }
+      function ext(shape, depth, bevel, seg) {
+        var g = new THREE.ExtrudeGeometry(shape, { depth: depth, bevelEnabled: !!bevel, bevelThickness: bevel || 0, bevelSize: bevel || 0, bevelSegments: seg || 4, curveSegments: 24 });
+        g.translate(0, 0, -depth / 2); return g;
+      }
+      function canvasTex(w, h, draw) { var c = document.createElement("canvas"); c.width = w; c.height = h; draw(c.getContext("2d"), w, h); var t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; return t; }
+
+      // ---- materials: matte dark plastic, glossy bezel, soft pink rubber buttons
+      var plastic = new THREE.MeshPhysicalMaterial({ color: 0x1d1d21, roughness: 0.6, metalness: 0, clearcoat: 0.2, clearcoatRoughness: 0.6, envMapIntensity: 0.35 });
+      var bezelM = new THREE.MeshPhysicalMaterial({ color: 0x0a0a0c, roughness: 0.3, clearcoat: 0.6, clearcoatRoughness: 0.2, envMapIntensity: 0.25 });
+      var rubber = new THREE.MeshStandardMaterial({ color: 0x0f0f11, roughness: 0.5, metalness: 0.05, envMapIntensity: 0.5 });
+      var pinkM = new THREE.MeshPhysicalMaterial({ color: 0xf0939a, roughness: 0.38, clearcoat: 0.5, clearcoatRoughness: 0.3, envMapIntensity: 0.6 });
+      var holeM = new THREE.MeshBasicMaterial({ color: 0x050506 });
+      var gray = new THREE.MeshStandardMaterial({ color: 0x2c2c31, roughness: 0.75 });
+
+      var BW = 1.8, BH = 2.96, BD = 0.36, BV = 0.05, F = BD / 2 + BV; // body, front face at z = F
+      var root3 = new THREE.Group(), model = new THREE.Group(); root3.add(model); scene.add(root3);
+      var body = new THREE.Mesh(ext(shape4(BW - 2 * BV, BH - 2 * BV, [0.14, 0.14, 0.42, 0.14]), BD, BV, 10), plastic); model.add(body);
+      // a seam around the edge, where the two shells meet
+      var seam = new THREE.Mesh(ext(shape4(BW + 0.004, BH + 0.004, [0.19, 0.19, 0.47, 0.19]), 0.012), holeM); seam.position.z = -0.03; model.add(seam);
+      var slotTop = new THREE.Mesh(new THREE.BoxGeometry(BW - 0.22, 0.008, 0.012), holeM); slotTop.position.set(0, BH / 2 - 0.2, F + 0.001); model.add(slotTop);
+
+      // ---- the screen
+      var bez = new THREE.Mesh(ext(shape4(1.46, 1.26, [0.07, 0.07, 0.3, 0.07]), 0.016), bezelM); bez.position.set(0, 0.64, F + 0.006); model.add(bez);
+      var lcdTex = new THREE.CanvasTexture(lcd); lcdTex.colorSpace = THREE.SRGBColorSpace; lcdTex.magFilter = THREE.NearestFilter; lcdTex.minFilter = THREE.LinearFilter; lcdTex.generateMipmaps = false;
+      var lcdM = new THREE.MeshBasicMaterial({ map: lcdTex, toneMapped: false });
+      var LW = 0.9, LH = LW * 144 / 160;
+      var lcdMesh = new THREE.Mesh(new THREE.PlaneGeometry(LW, LH), lcdM); lcdMesh.position.set(0, 0.67, F + 0.0145); lcdMesh.userData.k = "screen"; model.add(lcdMesh);
+      var lcdRim = new THREE.Mesh(new THREE.PlaneGeometry(LW + 0.03, LH + 0.03), holeM); lcdRim.position.set(0, 0.67, F + 0.0143); model.add(lcdRim);
+      // the bezel print and the power LED
+      var bezPrint = canvasTex(730, 630, function (g, w, h) {
+        var u = w / 1.46;
+        g.strokeStyle = "#f7a8a9"; g.lineWidth = 3; g.globalAlpha = 0.75;
+        g.beginPath(); g.moveTo(0.08 * u, 0.1 * u); g.lineTo(0.42 * u, 0.1 * u); g.moveTo(1.04 * u, 0.1 * u); g.lineTo(1.38 * u, 0.1 * u); g.stroke();
+        g.strokeStyle = "#3d3d44"; g.beginPath(); g.moveTo(0.08 * u, 0.115 * u); g.lineTo(0.42 * u, 0.115 * u); g.moveTo(1.04 * u, 0.115 * u); g.lineTo(1.38 * u, 0.115 * u); g.stroke();
+        g.globalAlpha = 1; g.fillStyle = "#7c7c84"; g.font = "500 15px " + MONO; g.textAlign = "center"; g.textBaseline = "middle"; g.fillText("160 × 144 · 4 SHADES", 0.73 * u, 0.108 * u);
+        g.font = "500 11px " + MONO; g.fillText("POWER", 0.11 * u, 0.53 * u);
+      });
+      var bp = new THREE.Mesh(new THREE.PlaneGeometry(1.46, 1.26), new THREE.MeshBasicMaterial({ map: bezPrint, transparent: true, depthWrite: false })); bp.position.set(0, 0.64, F + 0.0145); model.add(bp);
+      var ledM = new THREE.MeshStandardMaterial({ color: 0x3b1d20, emissive: 0xf7a8a9, emissiveIntensity: 0, roughness: 0.3 });
+      var led = new THREE.Mesh(new THREE.SphereGeometry(0.022, 20, 12), ledM); led.scale.z = 0.5; led.position.set(-0.62, 0.71, F + 0.016); model.add(led);
+      var ledGlow = new THREE.PointLight(0xf7a8a9, 0, 0.5, 2); ledGlow.position.set(-0.62, 0.71, F + 0.08); model.add(ledGlow);
+      // glass over the bezel: catches the room's reflections
+      var glass = new THREE.Mesh(new THREE.ShapeGeometry(shape4(1.46, 1.26, [0.07, 0.07, 0.3, 0.07]), 24), new THREE.MeshPhysicalMaterial({ color: 0xffffff, roughness: 0.08, metalness: 0, transparent: true, opacity: 0.05, envMapIntensity: 0.6, depthWrite: false }));
+      glass.position.set(0, 0.64, F + 0.02); model.add(glass);
+      var screenGlow = new THREE.PointLight(0xf7c8ca, 0, 1.4, 2); screenGlow.position.set(0, 0.67, F + 0.35); model.add(screenGlow);
+
+      // ---- printing on the case: brand, labels
+      var print = canvasTex(720, 1184, function (g, w, h) {
+        var u = w / BW; function P(x, y) { return [(x + BW / 2) * u, (BH / 2 - y) * u]; }
+        g.textBaseline = "middle";
+        var b = P(-0.68, -0.11); g.font = "italic 700 64px " + SANS; g.fillStyle = "#ececf0"; g.textAlign = "left"; g.fillText("gn", b[0], b[1]);
+        var gw = g.measureText("gn").width; g.font = "300 60px " + SANS; g.fillStyle = "#8c8c94"; g.fillText("pocket", b[0] + gw + 6, b[1]);
+        g.fillStyle = "#6f6f77"; g.font = "500 22px " + MONO; g.textAlign = "center";
+        [["B", 0.2, -0.82], ["A", 0.56, -0.66]].forEach(function (l) { var q = P(l[1], l[2]); g.fillText(l[0], q[0], q[1]); });
+        g.font = "500 15px " + MONO;
+        [["SELECT", -0.2, -1.12], ["START", 0.12, -1.12]].forEach(function (l) { var q = P(l[1], l[2]); g.save(); g.translate(q[0], q[1]); g.rotate(-0.42); g.fillText(l[0], 0, 0); g.restore(); });
+        var o = P(-0.5, BH / 2 - 0.09); g.font = "500 14px " + MONO; g.fillText("◂ OFF · ON ▸", o[0], o[1]);
+      });
+      var pr = new THREE.Mesh(new THREE.PlaneGeometry(BW, BH), new THREE.MeshBasicMaterial({ map: print, transparent: true, depthWrite: false })); pr.position.z = F + 0.0008; model.add(pr);
+
+      // ---- d-pad: a cross that tips toward the direction you press
+      var dpadG = new THREE.Group(); dpadG.position.set(-0.46, -0.55, F); model.add(dpadG);
+      var well = new THREE.Mesh(new THREE.CircleGeometry(0.31, 48), new THREE.MeshStandardMaterial({ color: 0x141417, roughness: 0.8 })); well.position.z = 0.001; dpadG.add(well);
+      var A2 = 0.085, L2 = 0.25, cross = new THREE.Shape();
+      cross.moveTo(-A2, L2); cross.lineTo(A2, L2); cross.lineTo(A2, A2); cross.lineTo(L2, A2); cross.lineTo(L2, -A2); cross.lineTo(A2, -A2); cross.lineTo(A2, -L2); cross.lineTo(-A2, -L2); cross.lineTo(-A2, -A2); cross.lineTo(-L2, -A2); cross.lineTo(-L2, A2); cross.lineTo(-A2, A2); cross.closePath();
+      var dpad = new THREE.Mesh(ext(cross, 0.05, 0.014, 4), rubber); dpad.position.z = 0.04; dpad.userData.k = "dpad"; dpadG.add(dpad);
+      var dimple = new THREE.Mesh(new THREE.CircleGeometry(0.04, 32), new THREE.MeshStandardMaterial({ color: 0x08080a, roughness: 0.4 })); dimple.position.z = 0.0405; dpad.add(dimple);
+      [[0, 1], [0, -1], [1, 0], [-1, 0]].forEach(function (d) { // embossed arrows
+        var tri = new THREE.Shape(); tri.moveTo(0, 0.035); tri.lineTo(0.03, -0.015); tri.lineTo(-0.03, -0.015); tri.closePath();
+        var m = new THREE.Mesh(new THREE.ShapeGeometry(tri), new THREE.MeshStandardMaterial({ color: 0x26262b, roughness: 0.6 }));
+        m.position.set(d[0] * 0.18, d[1] * 0.18, 0.0405); m.rotation.z = Math.atan2(-d[0], d[1]); dpad.add(m);
+      });
+
+      // ---- A and B: domed buttons sitting in a slanted pill
+      var pill = new THREE.Mesh(ext(rr(0.74, 0.34, 0.17), 0.01), new THREE.MeshStandardMaterial({ color: 0x141417, roughness: 0.85 })); pill.position.set(0.38, -0.54, F + 0.001); pill.rotation.z = 0.42; model.add(pill);
+      var prof = [new THREE.Vector2(0.132, 0), new THREE.Vector2(0.132, 0.03), new THREE.Vector2(0.125, 0.058), new THREE.Vector2(0.1, 0.075), new THREE.Vector2(0.06, 0.083), new THREE.Vector2(0, 0.085)];
+      var btnGeo = new THREE.LatheGeometry(prof, 48); btnGeo.rotateX(Math.PI / 2);
+      function mkBtn(k, x, y) {
+        var hole = new THREE.Mesh(new THREE.CircleGeometry(0.142, 48), holeM); hole.position.set(x, y, F + 0.012); model.add(hole);
+        var m = new THREE.Mesh(btnGeo, pinkM); m.position.set(x, y, F - 0.01); m.userData.k = k; m.userData.z0 = F - 0.01; model.add(m); return m;
+      }
+      var bA = mkBtn("a", 0.56, -0.47), bB = mkBtn("b", 0.2, -0.63);
+      // select / start
+      function mkPill(k, x, y) {
+        var well2 = new THREE.Mesh(new THREE.ShapeGeometry(rr(0.27, 0.085, 0.0425), 16), holeM); well2.position.set(x, y, F + 0.001); well2.rotation.z = 0.42; model.add(well2);
+        var m = new THREE.Mesh(ext(rr(0.23, 0.055, 0.0275), 0.03, 0.008, 3), gray); m.position.set(x, y, F + 0.012); m.rotation.z = 0.42; m.userData.k = k; m.userData.z0 = F + 0.012; model.add(m); return m;
+      }
+      var bSel = mkPill("select", -0.2, -1.03), bSt = mkPill("start", 0.12, -1.03);
+      // speaker slots
+      var spk = new THREE.Group(); spk.position.set(0.5, -1.14, F + 0.001); spk.rotation.z = 0.42; model.add(spk);
+      for (var si = 0; si < 6; si++) { var sl = new THREE.Mesh(new THREE.ShapeGeometry(rr(0.034, 0.34, 0.017), 8), holeM); sl.position.x = (si - 2.5) * 0.07; spk.add(sl); }
+      // power switch on the top edge, a volume wheel on the side, a port on the other
+      var pSlot = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.02, 0.09), holeM); pSlot.position.set(-0.5, BH / 2 + 0.002, 0.02); model.add(pSlot);
+      var pKnob = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.07, 0.07), gray); pKnob.position.set(-0.59, BH / 2 + 0.025, 0.02); pKnob.userData.k = "power"; model.add(pKnob);
+      var pLight = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.012, 0.03), new THREE.MeshBasicMaterial({ color: 0xf7a8a9 })); pLight.position.set(-0.4, BH / 2 + 0.012, 0.02); model.add(pLight); pLight.visible = false;
+      var wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.13, 0.05, 40), gray); wheel.rotation.z = Math.PI / 2; wheel.position.set(BW / 2 - 0.06, 0.55, 0.0); model.add(wheel);
+      var port = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.12, 0.1), holeM); port.position.set(-BW / 2 - 0.001, 0.2, 0); model.add(port);
+      // back: a battery door and a sticker
+      var door = new THREE.Mesh(new THREE.ShapeGeometry(rr(1.2, 0.9, 0.06), 12), new THREE.MeshStandardMaterial({ color: 0x141417, roughness: 0.7 })); door.position.set(0, -0.6, -F - 0.001); door.rotation.y = Math.PI; model.add(door);
+      var stick = canvasTex(512, 256, function (g, w, h) { g.fillStyle = "#f7a8a9"; g.fillRect(0, 0, w, h); g.fillStyle = "#111"; g.font = "600 56px " + SANS; g.fillText("gn pocket", 32, 90); g.font = "500 22px " + MONO; g.fillText("MODEL GN-01 · MADE WITH THREE.JS", 32, 150); g.fillText("CODE BY GUILHERME NÓBREGA", 32, 190); });
+      var sticker = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 0.55), new THREE.MeshStandardMaterial({ map: stick, roughness: 0.6 })); sticker.rotation.y = Math.PI; sticker.position.set(0, 0.6, -F - 0.002); model.add(sticker);
+
+      // soft shadow under it
+      var shTex = canvasTex(256, 256, function (g) { var r0 = g.createRadialGradient(128, 128, 6, 128, 128, 128); r0.addColorStop(0, "rgba(0,0,0,.6)"); r0.addColorStop(1, "rgba(0,0,0,0)"); g.fillStyle = r0; g.fillRect(0, 0, 256, 256); });
+      var shadow = new THREE.Mesh(new THREE.PlaneGeometry(2.6, 1.1), new THREE.MeshBasicMaterial({ map: shTex, transparent: true, depthWrite: false })); shadow.rotation.x = -Math.PI / 2; shadow.position.y = -BH / 2 - 0.45; scene.add(shadow);
+
+      // ---- the screen texture follows the game; when off, the glass is dark with a blinking hint
+      onLcd = function () { lcdTex.needsUpdate = true; };
+      function drawOff(t) {
+        C.fillStyle = "#1a1214"; C.fillRect(0, 0, W, H);
+        if ((t * 1.6 | 0) % 2 === 0) { C.font = "8px " + FONT; C.textAlign = "center"; C.textBaseline = "middle"; C.fillStyle = "#f7a8a9"; C.fillText("PRESS POWER", 80, 72); }
+        lcdTex.needsUpdate = true;
+      }
+
+      // ---- input: click the real buttons
+      var ray = new THREE.Raycaster(), ptr = new THREE.Vector2(), HIT = [dpad, bA, bB, bSel, bSt, pKnob, lcdMesh];
+      var held = {}, tilt = { x: 0, y: 0 }, drag = null, dragY = 0, dragX = 0, hover = null;
+      function pick(e) {
+        var r = gl3.getBoundingClientRect(); ptr.set((e.clientX - r.left) / r.width * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+        ray.setFromCamera(ptr, camera); var h = ray.intersectObjects(HIT, false)[0]; return h || null;
+      }
+      function dirOf(h) { var p = dpadG.worldToLocal(h.point.clone()); return Math.abs(p.x) > Math.abs(p.y) ? (p.x > 0 ? "right" : "left") : (p.y > 0 ? "up" : "down"); }
+      hit3d = function (k, dur) { held[k] = Math.max(held[k] || 0, dur); };
+      var downK = null;
+      gl3.addEventListener("pointerdown", function (e) {
+        engaged = true; setStatus();
+        var h = pick(e);
+        if (!h) { if (e.pointerType === "mouse") { drag = { x: e.clientX, y: e.clientY, ry: dragY, rx: dragX }; gl3.setPointerCapture(e.pointerId); gl3.style.cursor = "grabbing"; } return; }
+        e.preventDefault();
+        var k = h.object.userData.k;
+        if (k === "power") { held.power = 0.2; power(!on); return; }
+        if (k === "screen") { if (!on) power(true); return; }
+        if (k === "dpad") k = dirOf(h);
+        downK = k; held[k] = 9; press(k); if (navigator.vibrate && touch) navigator.vibrate(8);
+      });
+      function up() { if (downK) { held[downK] = 0.06; downK = null; } if (drag) { drag = null; gl3.style.cursor = ""; } }
+      gl3.addEventListener("pointerup", up); gl3.addEventListener("pointercancel", up); gl3.addEventListener("pointerleave", function () { if (!drag) up(); hover = null; tmx = tmy = 0; });
+      var tmx = 0, tmy = 0, mx = 0, my = 0;
+      gl3.addEventListener("pointermove", function (e) {
+        var r = gl3.getBoundingClientRect(); tmx = (e.clientX - r.left) / r.width - 0.5; tmy = (e.clientY - r.top) / r.height - 0.5;
+        if (drag) { dragY = drag.ry + (e.clientX - drag.x) * 0.012; dragX = drag.rx + (e.clientY - drag.y) * 0.006; return; }
+        if (e.pointerType === "mouse") { var h = pick(e); gl3.style.cursor = h ? "pointer" : "grab"; }
+      });
+
+      // ---- layout and frame loop
+      var CW = 0, CH = 0;
+      function size() {
+        CW = gl3.clientWidth; CH = gl3.clientHeight; if (!CW || !CH) return;
+        renderer.setPixelRatio(Math.min(2, devicePixelRatio || 1)); renderer.setSize(CW, CH, false);
+        camera.aspect = CW / CH; var tn = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
+        camera.position.set(0, 0, Math.max(3.55 / (2 * tn), 2.3 / (2 * tn * camera.aspect))); camera.lookAt(0, -0.05, 0); camera.updateProjectionMatrix();
+      }
+      stage.classList.add("is3d"); is3d = true; size(); onRealResize(size);
+      var vis3 = false, raf3 = 0, l3 = 0, T3 = 0, intro = 0;
+      new IntersectionObserver(function (en) { vis3 = en[0].isIntersecting; if (vis3 && !raf3) { l3 = 0; raf3 = requestAnimationFrame(loop3); } }, { rootMargin: "60px 0px" }).observe(gl3);
+      function damp(a, b, k, dt) { return a + (b - a) * (1 - Math.exp(-k * dt)); }
+      function loop3(ts) {
+        raf3 = 0; if (!vis3) return;
+        var dt = l3 ? Math.min(0.05, (ts - l3) / 1000) : 0.016; l3 = ts; T3 += dt;
+        if (!CW) size();
+        // it flips in as you scroll to it, then floats and leans toward the cursor
+        var r = sec.getBoundingClientRect(), pIn = Math.max(0, Math.min(1, (innerHeight - r.top) / (innerHeight * 0.9)));
+        intro = damp(intro, pIn, 6, dt); var ei = 1 - Math.pow(1 - intro, 3);
+        mx = damp(mx, tmx, 5, dt); my = damp(my, tmy, 5, dt);
+        if (!drag) { dragY = damp(dragY, 0, 3, dt); dragX = damp(dragX, 0, 3, dt); }
+        var sway = still ? 0 : 1;
+        model.rotation.y = (1 - ei) * -2.4 + mx * 0.5 + Math.sin(T3 * 0.6) * 0.06 * sway + dragY;
+        model.rotation.x = (1 - ei) * 0.5 + my * 0.32 - 0.08 + dragX;
+        model.rotation.z = (1 - ei) * 0.25 + Math.sin(T3 * 0.45) * 0.02 * sway;
+        root3.position.y = (1 - ei) * -0.6 + Math.sin(T3 * 0.9) * 0.035 * sway;
+        shadow.material.opacity = 0.9 * ei - Math.sin(T3 * 0.9) * 0.1 * sway; shadow.position.x = model.rotation.y * -0.2;
+        // buttons
+        Object.keys(held).forEach(function (k) { if (held[k] > 0 && held[k] < 9) held[k] -= dt; });
+        function amt(k) { return held[k] > 0 ? 1 : 0; }
+        [[bA, "a"], [bB, "b"], [bSel, "select"], [bSt, "start"]].forEach(function (q) { var m = q[0], tgt = m.userData.z0 - (amt(q[1]) ? (q[1].length === 1 ? 0.035 : 0.012) : 0); m.position.z = damp(m.position.z, tgt, 30, dt); });
+        tilt.x = damp(tilt.x, (amt("down") - amt("up")) * 0.16, 28, dt); tilt.y = damp(tilt.y, (amt("right") - amt("left")) * 0.16, 28, dt);
+        dpad.rotation.x = tilt.x; dpad.rotation.y = tilt.y;
+        pKnob.position.x = damp(pKnob.position.x, on ? -0.41 : -0.59, 14, dt); pLight.visible = false;
+        ledM.emissiveIntensity = damp(ledM.emissiveIntensity, on ? 2.4 : 0, 8, dt); ledGlow.intensity = ledM.emissiveIntensity * 0.12;
+        screenGlow.intensity = damp(screenGlow.intensity, on ? 0.6 : 0, 4, dt);
+        wheel.rotation.x += dt * 0.0;
+        if (!on) drawOff(T3);
+        renderer.render(scene, camera);
+        raf3 = requestAnimationFrame(loop3);
+      }
+      if (vis3 && !raf3) raf3 = requestAnimationFrame(loop3);
+    }
+
   })();
 
   /* ---------- Elsewhere: three big doors; the hovered one shows a preview that floats with the cursor ---------- */

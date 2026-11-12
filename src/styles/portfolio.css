@@ -1313,6 +1313,11 @@ section.gbs { padding-block: 110px; overflow: hidden; }
 /* speaker */
 .gb-spk { position: absolute; right: 2.6em; bottom: 2.6em; display: flex; gap: .62em; transform: rotate(-24deg); }
 .gb-spk i { width: .5em; height: 5em; border-radius: .5em; background: #08080a; box-shadow: inset 0 .15em .2em rgba(0, 0, 0, .9), 0 1px 0 rgba(255, 255, 255, .05); }
+/* when three.js is up, the model takes over and the flat console only lends it its screen */
+.gb-gl { display: none; }
+.gbs-stage.is3d { position: relative; width: min(520px, 92vw); aspect-ratio: 5 / 6; }
+.gbs-stage.is3d .gb-gl { display: block; width: 100%; height: 100%; touch-action: pan-y; cursor: grab; }
+.gbs-stage.is3d .gb { position: absolute; left: 0; top: 0; visibility: hidden; pointer-events: none; }
 @media (max-width: 899px) {
   .gbs-wrap { grid-template-columns: minmax(0, 1fr); justify-items: center; }
   .gbs-copy { justify-self: stretch; max-width: none; }

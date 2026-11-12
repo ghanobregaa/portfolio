@@ -1,4 +1,4 @@
-// Play: a pocket console. The whole portfolio in 160 x 144 pixels; driven by the engine.
+// Play: a pocket console. The whole portfolio in 160 x 144 pixels; a three.js model driven by the engine.
 
 export function Play() {
   return (
@@ -17,6 +17,7 @@ export function Play() {
           <div className="gbs-status"><span className="gbs-dot" id="gb-state"></span><span id="gb-state-t">click the console to use your keyboard</span><button type="button" className="gbs-sound" id="gb-sound" aria-pressed="true">sound on</button></div>
         </div>
         <div className="gbs-stage" id="gb-stage">
+          <canvas id="gb-gl" className="gb-gl" aria-hidden="true"></canvas>
           <div className="gb" id="gb" role="application" aria-label="Pocket console. Use the arrow keys, Enter and Backspace once it is on.">
             <button type="button" className="gb-power" id="gb-power" aria-pressed="false" aria-label="Power"><i></i></button>
             <span className="gb-pw-l">OFF · ON</span>
