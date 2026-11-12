@@ -35,8 +35,8 @@ export default function App() {
         <Work />
         <Certificates />
         <Stack />
-        <Play />
         <MobileApp />
+        <Play />
         <Contact />
       </main>
       <Footer />
