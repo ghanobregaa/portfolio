@@ -1236,6 +1236,252 @@ export function startEngine(): void {
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(fit);
   })();
 
+  /* ---------- Play: a pocket console, the whole portfolio in 160 x 144 pixels and four shades ---------- */
+  (function () {
+    var dev = document.getElementById("gb"), lcd = document.getElementById("gb-lcd");
+    if (!dev || !lcd) return;
+    var sec = document.getElementById("play"), stage = document.getElementById("gb-stage"), C = lcd.getContext("2d"), W = 160, H = 144;
+    var PAL = [[248, 232, 233], [236, 166, 171], [150, 72, 82], [40, 18, 22]], PC = PAL.map(function (c) { return "rgb(" + c.join(",") + ")"; });
+    var FONT = '"Press Start 2P", monospace';
+    var touch = matchMedia("(hover: none)").matches, still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    var on = false, engaged = false, visible = false, state = "off", tState = 0, sel = 0, toast = "", toastT = 0, sound = true, raf = 0, last = 0;
+    var stDot = document.getElementById("gb-state"), stT = document.getElementById("gb-state-t"), sndBtn = document.getElementById("gb-sound");
+    var age = (document.getElementById("age") || {}).textContent || "26", xp = Math.max(1, new Date().getFullYear() - 2021);
+    var best = 0; try { best = +localStorage.getItem("gn-snake") || 0; } catch (e) {}
+
+    // ---- sound: tiny square-wave blips, only ever after the visitor pressed something
+    var ac = null;
+    function beep(f, d, vol, to, type) {
+      if (!sound) return;
+      try {
+        if (!ac) ac = new (window.AudioContext || window.webkitAudioContext)();
+        if (ac.state === "suspended") ac.resume();
+        var o = ac.createOscillator(), g = ac.createGain(), n = ac.currentTime;
+        o.type = type || "square"; o.frequency.setValueAtTime(f, n); if (to) o.frequency.exponentialRampToValueAtTime(to, n + d);
+        g.gain.setValueAtTime(vol || 0.04, n); g.gain.exponentialRampToValueAtTime(0.0001, n + d);
+        o.connect(g); g.connect(ac.destination); o.start(n); o.stop(n + d + 0.03);
+      } catch (e) {}
+    }
+    var blip = function () { beep(988, 0.035); }, okS = function () { beep(1319, 0.06); setTimeout(function () { beep(1760, 0.08); }, 55); }, backS = function () { beep(660, 0.07, 0.04, 440); };
+
+    // ---- drawing helpers (everything gets snapped to the 4-shade palette at the end of the frame)
+    function fill(c) { C.fillStyle = PC[c]; C.fillRect(0, 0, W, H); }
+    function box(x, y, w, h, c) { C.fillStyle = PC[c]; C.fillRect(x, y, w, h); }
+    function T(s, x, y, c, size, align) { C.font = (size || 8) + "px " + FONT; C.textBaseline = "top"; C.textAlign = align || "left"; C.fillStyle = PC[c == null ? 3 : c]; C.fillText(s, x, y); }
+    function arrow(x, y, c) { box(x, y, 2, 7, c); box(x + 2, y + 1, 2, 5, c); box(x + 4, y + 2, 2, 3, c); box(x + 6, y + 3, 1, 1, c); }
+    function frame(x, y, w, h, c, bg) { box(x, y, w, h, c); box(x + 2, y + 2, w - 4, h - 4, bg == null ? 0 : bg); }
+    function header(s, r) { box(0, 0, W, 13, 3); T(s, 4, 3, 0); if (r != null) T(String(r), W - 4, 3, 1, 8, "right"); }
+    function footer(s) { box(0, H - 12, W, 12, 1); T(s, 4, H - 10, 3); }
+    function snap() {
+      var im = C.getImageData(0, 0, W, H), d = im.data;
+      for (var i = 0; i < d.length; i += 4) {
+        var b = 0, bd = 1e9;
+        for (var k = 0; k < 4; k++) { var p = PAL[k], r = d[i] - p[0], g = d[i + 1] - p[1], bl = d[i + 2] - p[2], dd = r * r + g * g + bl * bl; if (dd < bd) { bd = dd; b = k; } }
+        d[i] = PAL[b][0]; d[i + 1] = PAL[b][1]; d[i + 2] = PAL[b][2]; d[i + 3] = 255;
+      }
+      C.putImageData(im, 0, 0);
+    }
+
+    // ---- screens
+    var MENU = [["ABOUT ME", "about"], ["QUEST LOG", "quests"], ["INVENTORY", "items"], ["BADGES", "badges"], ["WARP ZONE", "warp"], ["SNAKE", "snake"]];
+    var ITEMS = [["FLUTTER", "APPS FOR EVERY", "POCKET"], ["PYTHON", "ROBOTS, SCRIPTS", "AND AUTOMATIONS"], ["FLASK", "SMALL, FAST", "BACKENDS"], ["JS", "MAKES THE WEB", "MOVE"], ["REACT", "INTERFACES THAT", "FEEL INSTANT"],
+      ["TAILWIND", "STYLES AT THE", "SPEED OF THOUGHT"], ["MYSQL", "KEEPS THE DATA", "IN ORDER"], ["REST API", "SO SYSTEMS CAN", "TALK TO EACH OTHER"], ["HTML", "THE BONES OF", "EVERY PAGE"], ["CSS", "AND EVERYTHING", "YOU SEE"]];
+    var BADGES = [["PM AND AGILE", "SANTANDER"], ["MARKETING VOICES", "NEXTUMA"], ["CYBERSECURITY", "UTAD C-ACADEMY"], ["LEADING DEVS", "LINKEDIN LEARNING"]];
+    var WARPS = [["LINKEDIN", "/IN/GHANOBREGA", "li"], ["GITHUB", "@GHANOBREGAA", "gh"], ["INSTAGRAM", "@GHANOBREGA", "ig"]];
+    var sub = 0; // cursor inside a screen
+
+    function drawBoot(t) {
+      fill(0);
+      var y = Math.min(44, -30 + t * 70);
+      T("gn", 80, y, 3, 24, "center"); box(104, y + 18, 8, 3, (t * 3 | 0) % 2 ? 0 : 2);
+      if (t > 1.15) T("POCKET", 80, y + 34, 2, 8, "center");
+      if (t > 1.7) T("(C) " + new Date().getFullYear() + " GN", 80, 118, 1, 8, "center");
+    }
+    function drawMenu(t) {
+      fill(0); header("MAIN MENU", "P1");
+      MENU.forEach(function (m, i) {
+        var y = 20 + i * 17;
+        if (i === sel) { box(6, y - 4, 148, 15, 1); arrow(10 + (still ? 0 : Math.round(Math.sin(t * 8))), y, 3); }
+        T(m[0], 24, y, i === sel ? 3 : 2);
+      });
+      footer("A OPEN   B BACK");
+    }
+    function drawAbout(t) {
+      fill(0); header("ABOUT ME");
+      var rows = [["NAME", "GUILHERME"], ["CLASS", "FULL-STACK"], ["LVL", age], ["XP", xp + " YEARS"], ["GUILD", "GRUPO AFA"]];
+      rows.forEach(function (r, i) { T(r[0], 6, 19 + i * 12, 2); T(r[1], 56, 19 + i * 12, 3); });
+      box(6, 81, 148, 2, 1);
+      T("SPECIAL MOVES", 6, 88, 2);
+      ["SHIP APPS", "WRITE APIS", "AUTOMATE IT ALL"].forEach(function (s, i) { var y = 100 + i * 10; if ((t * 2 | 0) % 3 === i) arrow(6, y, 3); T(s, 18, y, 3); });
+      footer("B BACK");
+    }
+    function drawQuests(t) {
+      fill(0); header("QUEST LOG", "2");
+      T("GRUPO AFA", 6, 19, 3); T("2022 - NOW", 6, 30, 2); T("SOFTWARE DEV", 6, 41, 3);
+      if ((t * 2 | 0) % 2) box(6, 54, 6, 6, 3); T("ACTIVE", 16, 53, 3);
+      box(6, 66, 148, 2, 1);
+      T("SAVOY SIGNATURE", 6, 74, 3); T("2021 - 2022", 6, 85, 2); T("DEVELOPER", 6, 96, 3);
+      box(6, 109, 6, 6, 2); T("CLEARED", 16, 108, 2);
+      footer("B BACK");
+    }
+    function drawItems(t) {
+      fill(0); header("INVENTORY", (sub + 1) + "/10");
+      ITEMS.forEach(function (it, i) {
+        var x = i % 2 ? 82 : 4, y = 17 + (i >> 1) * 15;
+        if (i === sub) box(x, y - 2, 74, 13, 1);
+        box(x + 3, y + 1, 6, 6, i === sub ? 3 : 2); T(it[0], x + 12, y, 3);
+      });
+      frame(4, 94, 152, 36, 3); var it = ITEMS[sub]; T(it[1], 9, 101, 3); T(it[2], 9, 113, 3);
+      footer("B BACK");
+    }
+    function drawBadges(t) {
+      fill(0); header("BADGES", "4/4");
+      BADGES.forEach(function (b, i) {
+        var y = 18 + i * 28, s = i === sub;
+        if (s) box(4, y - 3, 152, 26, 1);
+        // a little pixel medal
+        box(8, y + 1, 8, 8, s ? 3 : 2); box(10, y + 3, 4, 4, s ? 1 : 0); box(9, y + 9, 2, 4, 2); box(13, y + 9, 2, 4, 2);
+        if (s && (t * 4 | 0) % 2) box(18, y - 1, 2, 2, 3);
+        T(b[0], 22, y, 3); T(b[1], 22, y + 11, 2);
+      });
+      footer("B BACK");
+    }
+    function drawWarp(t) {
+      fill(0); header("WARP ZONE");
+      WARPS.forEach(function (w, i) {
+        var x = 10 + i * 50, y = 26, s = i === sub;
+        frame(x, y, 40, 54, 3, s ? 3 : 1);
+        if (s) { for (var k = 0; k < 4; k++) { var r = ((t * 30 + k * 7) % 26) | 0; box(x + 20 - r * 0.6, y + 27 - r * 0.8, r * 1.2, 2, k % 2 ? 1 : 2); } }
+        box(x + 30, y + 26, 3, 4, s ? 1 : 3);
+        T(w[2].toUpperCase(), x + 20, y + 60, s ? 3 : 2, 8, "center");
+      });
+      var w = WARPS[sub]; frame(4, 98, 152, 30, 3); T(w[0], 80, 103, 3, 8, "center"); T(w[1], 80, 115, 2, 8, "center");
+      footer("A WARP   B BACK");
+    }
+
+    // ---- snake
+    var sn = {};
+    function snakeReset() { sn = { body: [[6, 8], [5, 8], [4, 8]], dir: [1, 0], next: [1, 0], food: null, score: 0, over: false, paused: false, acc: 0, step: 0.14 }; placeFood(); }
+    function placeFood() { do { sn.food = [Math.random() * 20 | 0, Math.random() * 15 | 0]; } while (sn.body.some(function (b) { return b[0] === sn.food[0] && b[1] === sn.food[1]; })); }
+    function snakeTick() {
+      sn.dir = sn.next; var h = sn.body[0], n = [h[0] + sn.dir[0], h[1] + sn.dir[1]];
+      if (n[0] < 0 || n[0] > 19 || n[1] < 0 || n[1] > 14 || sn.body.some(function (b, i) { return i < sn.body.length - 1 && b[0] === n[0] && b[1] === n[1]; })) {
+        sn.over = true; if (sn.score > best) { best = sn.score; try { localStorage.setItem("gn-snake", best); } catch (e) {} }
+        beep(440, 0.12); setTimeout(function () { beep(330, 0.12); }, 120); setTimeout(function () { beep(220, 0.3, 0.05, 110); }, 240); return;
+      }
+      sn.body.unshift(n);
+      if (n[0] === sn.food[0] && n[1] === sn.food[1]) { sn.score++; sn.step = Math.max(0.065, sn.step - 0.005); beep(1568, 0.05); placeFood(); } else sn.body.pop();
+    }
+    function drawSnake(t, dt) {
+      if (!sn.over && !sn.paused) { sn.acc += dt; while (sn.acc >= sn.step && !sn.over) { sn.acc -= sn.step; snakeTick(); } }
+      fill(0); header("SNAKE", "SC " + sn.score);
+      box(0, 13, W, 2, 1);
+      if ((t * 3 | 0) % 2 || sn.over) { var f = sn.food; box(f[0] * 8 + 2, 16 + f[1] * 8 + 2, 4, 4, 2); box(f[0] * 8 + 3, 16 + f[1] * 8 + 1, 2, 6, 2); box(f[0] * 8 + 1, 16 + f[1] * 8 + 3, 6, 2, 2); }
+      sn.body.forEach(function (b, i) { box(b[0] * 8 + 1, 16 + b[1] * 8 + 1, 7 - (i ? 1 : 0), 7 - (i ? 1 : 0), 3); });
+      if (sn.paused) { frame(34, 58, 92, 24, 3); T("PAUSED", 80, 66, 3, 8, "center"); }
+      if (sn.over) { frame(14, 44, 132, 56, 3); T("GAME OVER", 80, 52, 3, 8, "center"); T("BEST " + best, 80, 66, 2, 8, "center"); T("A RETRY B EXIT", 80, 82, 3, 8, "center"); }
+    }
+
+    var DRAW = { boot: drawBoot, menu: drawMenu, about: drawAbout, quests: drawQuests, items: drawItems, badges: drawBadges, warp: drawWarp, snake: drawSnake };
+    function go(s) { state = s; tState = 0; sub = 0; if (s === "snake") snakeReset(); kick(); }
+    function render(dt) {
+      tState += dt; C.imageSmoothingEnabled = false;
+      DRAW[state](tState, dt);
+      if (toast && toastT > 0) { toastT -= dt; frame(18, 56, 124, 26, 3); T(toast, 80, 65, 3, 8, "center"); }
+      snap();
+      if (state === "boot" && tState > 2.6) go("menu");
+    }
+    function loop(ts) {
+      raf = 0; if (!on) return;
+      var dt = last ? Math.min(0.1, (ts - last) / 1000) : 0.016; last = ts;
+      render(dt);
+      if (visible) raf = requestAnimationFrame(loop); else last = 0;
+    }
+    function kick() { if (on && visible && !raf) { last = 0; raf = requestAnimationFrame(loop); } }
+
+    // ---- power and input
+    function setStatus() {
+      stDot.classList.toggle("on", on && (engaged || touch));
+      stT.textContent = !on ? (touch ? "tap power to switch it on" : "press power, or click the console") : touch ? "tap the buttons to play" : engaged ? "keyboard is plugged in" : "click the console to use your keyboard";
+      dev.classList.toggle("engaged", on && engaged && !touch);
+    }
+    function power(v) {
+      on = v; dev.classList.toggle("on", on); document.getElementById("gb-power").setAttribute("aria-pressed", on);
+      if (on) {
+        if (document.fonts && document.fonts.load) document.fonts.load("8px " + FONT).catch(function () {});
+        beep(1047, 0.09); setTimeout(function () { beep(2093, 0.45, 0.035); }, 1150);
+        sel = 0; go("boot");
+      } else { beep(300, 0.18, 0.04, 80); state = "off"; if (raf) cancelAnimationFrame(raf); raf = 0; }
+      setStatus();
+    }
+    function open(link) {
+      var a = document.createElement("a"); a.href = link; a.target = "_blank"; a.rel = "noopener"; document.body.appendChild(a); a.click(); a.remove();
+    }
+    function press(k) {
+      if (!on) { if (k === "a" || k === "start") power(true); return; }
+      kick();
+      if (state === "boot") { if (k === "a" || k === "start") go("menu"); return; }
+      if (state === "menu") {
+        if (k === "up" || k === "down") { sel = (sel + (k === "up" ? -1 : 1) + MENU.length) % MENU.length; blip(); }
+        else if (k === "a" || k === "right" || k === "start") { okS(); go(MENU[sel][1]); }
+        else if (k === "select") { toast = "HI " + (best ? "SNAKE " + best : "THERE"); toastT = 1.2; blip(); }
+        return;
+      }
+      if (k === "b") { backS(); go("menu"); return; }
+      if (state === "items") {
+        var d = { up: -2, down: 2, left: -1, right: 1 }[k];
+        if (d) { var n = sub + d; if (n >= 0 && n < ITEMS.length) { sub = n; blip(); } }
+      } else if (state === "badges") {
+        if (k === "up" || k === "down") { sub = (sub + (k === "up" ? -1 : 1) + BADGES.length) % BADGES.length; blip(); }
+        else if (k === "a") { toast = "BADGE EARNED"; toastT = 1; okS(); }
+      } else if (state === "warp") {
+        if (k === "left" || k === "right" || k === "up" || k === "down") { sub = (sub + (k === "left" || k === "up" ? -1 : 1) + 3) % 3; blip(); }
+        else if (k === "a") {
+          var row = document.querySelector('.ct-row[data-k="' + WARPS[sub][2] + '"]');
+          toast = "WARPING..."; toastT = 1.2; beep(523, 0.35, 0.04, 2093);
+          if (row) open(row.href);
+        }
+      } else if (state === "snake") {
+        var dir = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] }[k];
+        if (dir && !sn.over) { if (dir[0] !== -sn.dir[0] || dir[1] !== -sn.dir[1]) sn.next = dir; if (sn.paused) sn.paused = false; }
+        else if (k === "a" && sn.over) { okS(); snakeReset(); }
+        else if (k === "start" && !sn.over) { sn.paused = !sn.paused; blip(); }
+      }
+    }
+    // the on-screen buttons
+    var BTN = {}; Array.prototype.forEach.call(dev.querySelectorAll("[data-k]"), function (b) { BTN[b.dataset.k] = b; });
+    function flash(k) { var b = BTN[k]; if (!b) return; b.classList.add("down-k"); clearTimeout(b._t); b._t = setTimeout(function () { b.classList.remove("down-k"); }, 120); }
+    Array.prototype.forEach.call(dev.querySelectorAll("[data-k]"), function (b) {
+      b.addEventListener("pointerdown", function (e) { e.preventDefault(); engaged = true; setStatus(); press(b.dataset.k); if (navigator.vibrate && touch) navigator.vibrate(8); });
+    });
+    document.getElementById("gb-power").addEventListener("click", function () { engaged = true; power(!on); });
+    document.getElementById("gb-hint").addEventListener("click", function () { engaged = true; power(true); });
+    sndBtn.addEventListener("click", function () { sound = !sound; sndBtn.textContent = sound ? "sound on" : "sound off"; sndBtn.setAttribute("aria-pressed", sound); if (sound) blip(); });
+    dev.addEventListener("pointerdown", function () { if (!engaged) { engaged = true; setStatus(); } });
+    document.addEventListener("pointerdown", function (e) { if (engaged && !dev.contains(e.target) && !e.target.closest(".gbs-status")) { engaged = false; setStatus(); } });
+    var KEYS = { ArrowUp: "up", KeyW: "up", ArrowDown: "down", KeyS: "down", ArrowLeft: "left", KeyA: "left", ArrowRight: "right", KeyD: "right", Enter: "a", KeyP: "a", Backspace: "b", KeyL: "b", Escape: "b", Space: "start", ShiftLeft: "select", ShiftRight: "select" };
+    var kbds = sec.querySelectorAll(".gbs-keys kbd"), KBD = { up: 0, down: 1, left: 2, right: 3, a: 4, b: 5, start: 6 };
+    addEventListener("keydown", function (e) {
+      if (!engaged || !visible || e.metaKey || e.ctrlKey || e.altKey) return;
+      var t = e.target; if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
+      var k = KEYS[e.code]; if (!k) return;
+      e.preventDefault(); if (e.repeat && !(state === "menu" || state === "items" || state === "badges")) return;
+      flash(k); press(k);
+      var kb = kbds[KBD[k]]; if (kb) { kb.classList.add("hit"); clearTimeout(kb._t); kb._t = setTimeout(function () { kb.classList.remove("hit"); }, 140); }
+    });
+    if ("IntersectionObserver" in window) new IntersectionObserver(function (en) {
+      visible = en[0].isIntersecting;
+      if (!visible && state === "snake" && sn && !sn.over) sn.paused = true;
+      kick();
+    }, { threshold: 0.2 }).observe(dev); else visible = true;
+    // the console leans toward the cursor
+    if (!touch && !still) {
+      stage.addEventListener("pointermove", function (e) { var r = dev.getBoundingClientRect(), x = (e.clientX - r.left) / r.width - 0.5, y = (e.clientY - r.top) / r.height - 0.5; dev.style.transform = "rotateY(" + (x * 10).toFixed(2) + "deg) rotateX(" + (-y * 8).toFixed(2) + "deg)"; });
+      stage.addEventListener("pointerleave", function () { dev.style.transform = ""; });
+    }
+    setStatus();
+  })();
+
   /* ---------- Elsewhere: three big doors; the hovered one shows a preview that floats with the cursor ---------- */
   (function () {
     var peek = document.getElementById("ct-peek"), grid = document.getElementById("pk-grid");

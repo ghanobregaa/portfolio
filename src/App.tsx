@@ -8,6 +8,7 @@ import { About } from "@/components/sections/About";
 import { Experience } from "@/components/sections/Experience";
 import { Certificates } from "@/components/sections/Certificates";
 import { Work } from "@/components/sections/Work";
+import { Play } from "@/components/sections/Play";
 import { Stack } from "@/components/sections/Stack";
 import { MobileApp } from "@/components/sections/MobileApp";
 import { Contact } from "@/components/sections/Contact";
@@ -34,6 +35,7 @@ export default function App() {
         <Work />
         <Certificates />
         <Stack />
+        <Play />
         <MobileApp />
         <Contact />
       </main>
