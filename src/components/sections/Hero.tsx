@@ -1,11 +1,11 @@
-import portraitImg from "@/assets/portrait.png";
+import avatarImg from "@/assets/avatar.jpg";
 
 export function Hero() {
   return (
       <div className="hero-wrap" id="hero-wrap">
         <canvas id="topo" aria-hidden="true"></canvas>
-        <canvas id="portrait" className="hero-portrait" aria-hidden="true" data-src={portraitImg}></canvas>
         <header className="container hero">
+          <span className="avatar"><img src={avatarImg} alt="Guilherme Nóbrega" width={160} height={160} /></span>
           <h1 aria-label="Guilherme Nóbrega, full-stack developer">
             <span className="line glitch" id="name-line" data-text="Guilherme Nóbrega" data-split>Guilherme Nóbrega</span>
             <span className="line sub" data-split id="rotator">Full-stack developer</span>
