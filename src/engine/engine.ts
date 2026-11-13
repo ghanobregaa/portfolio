@@ -1236,465 +1236,223 @@ export function startEngine(): void {
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(fit);
   })();
 
-  /* ---------- Play: a pocket console, the whole portfolio in 160 x 144 pixels and four shades ---------- */
+  /* ---------- Warp: idea to production. A portal opens, objects fly at you out of a starfield that stretches with your scroll speed, and it closes behind you ---------- */
   (function () {
-    var dev = document.getElementById("gb"), lcd = document.getElementById("gb-lcd");
-    if (!dev || !lcd) return;
-    var sec = document.getElementById("play"), stage = document.getElementById("gb-stage"), C = lcd.getContext("2d"), W = 160, H = 144;
-    var PAL = [[248, 232, 233], [236, 166, 171], [150, 72, 82], [40, 18, 22]], PC = PAL.map(function (c) { return "rgb(" + c.join(",") + ")"; });
-    var FONT = '"Press Start 2P", monospace';
-    var touch = matchMedia("(hover: none)").matches, still = matchMedia("(prefers-reduced-motion: reduce)").matches;
-    var onLcd = null, hit3d = null, is3d = false, on = false, engaged = false, visible = false, state = "off", tState = 0, sel = 0, toast = "", toastT = 0, sound = true, raf = 0, last = 0;
-    var stDot = document.getElementById("gb-state"), stT = document.getElementById("gb-state-t"), sndBtn = document.getElementById("gb-sound");
-    var age = (document.getElementById("age") || {}).textContent || "26", xp = Math.max(1, new Date().getFullYear() - 2021);
-    var best = 0; try { best = +localStorage.getItem("gn-snake") || 0; } catch (e) {}
+    var sec = document.getElementById("warp"), cv = document.getElementById("wp-cv"), gl = document.getElementById("wp-gl");
+    if (!sec || !cv) return;
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) { var e0 = document.getElementById("wp-end"); if (e0) e0.style.opacity = 1; return; }
+    var g = cv.getContext("2d"), end = document.getElementById("wp-end"), sticky = document.getElementById("wp-sticky");
+    var hud = sec.querySelector(".wp-hud"), hint = document.getElementById("wp-hint"), vEl = document.getElementById("wp-v"), bar = document.getElementById("wp-bar");
+    var cap = document.getElementById("wp-cap"), capN = document.getElementById("wp-cap-n"), capT = document.getElementById("wp-cap-t"), capD = document.getElementById("wp-cap-d");
+    var STAGES = [["Idea", 'a sketch, a problem, a "what if"'], ["Design", "pixels, flows and how it feels"], ["API", "flask · rest · mysql"], ["App", "flutter · react · tailwind"], ["Production", "shipped, monitored, automated"]];
+    var AT0 = 0.08, STEP = 0.13;
+    var W = 0, H = 0, dpr = 1, on = false, raf = 0, lastY = scrollY, vel = 0, lastT = 0, flash = 0, wasEnd = false, capIdx = -1, T = 0;
+    var small = matchMedia("(max-width: 700px)").matches, N = small ? 520 : 1000, S = [];
+    function rnd(a, b) { return a + Math.random() * (b - a); }
+    function spawn(s, far) { var a = Math.random() * 6.283, r = Math.pow(Math.random(), 0.6) * 1.6 + 0.04; s.x = Math.cos(a) * r; s.y = Math.sin(a) * r; s.z = far ? rnd(0.75, 1) : rnd(0.02, 1); s.pz = s.z; s.pk = Math.random() < 0.16; }
+    for (var i = 0; i < N; i++) { var s = {}; spawn(s, false); S.push(s); }
+    function size() { dpr = Math.min(2, devicePixelRatio || 1); W = cv.clientWidth; H = cv.clientHeight; cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); if (three) three.size(); }
+    var three = null;
+    size(); onRealResize(size);
+    function cl(x) { return Math.max(0, Math.min(1, x)); }
+    function sm(x) { x = cl(x); return x * x * (3 - 2 * x); }
 
-    // ---- sound: tiny square-wave blips, only ever after the visitor pressed something
-    var ac = null;
-    function beep(f, d, vol, to, type) {
-      if (!sound) return;
-      try {
-        if (!ac) ac = new (window.AudioContext || window.webkitAudioContext)();
-        if (ac.state === "suspended") ac.resume();
-        var o = ac.createOscillator(), g = ac.createGain(), n = ac.currentTime;
-        o.type = type || "square"; o.frequency.setValueAtTime(f, n); if (to) o.frequency.exponentialRampToValueAtTime(to, n + d);
-        g.gain.setValueAtTime(vol || 0.04, n); g.gain.exponentialRampToValueAtTime(0.0001, n + d);
-        o.connect(g); g.connect(ac.destination); o.start(n); o.stop(n + d + 0.03);
-      } catch (e) {}
-    }
-    var blip = function () { beep(988, 0.035); }, okS = function () { beep(1319, 0.06); setTimeout(function () { beep(1760, 0.08); }, 55); }, backS = function () { beep(660, 0.07, 0.04, 440); };
-
-    // ---- drawing helpers (everything gets snapped to the 4-shade palette at the end of the frame)
-    function fill(c) { C.fillStyle = PC[c]; C.fillRect(0, 0, W, H); }
-    function box(x, y, w, h, c) { C.fillStyle = PC[c]; C.fillRect(x, y, w, h); }
-    function T(s, x, y, c, size, align) { C.font = (size || 8) + "px " + FONT; C.textBaseline = "top"; C.textAlign = align || "left"; C.fillStyle = PC[c == null ? 3 : c]; C.fillText(s, x, y); }
-    function arrow(x, y, c) { box(x, y, 2, 7, c); box(x + 2, y + 1, 2, 5, c); box(x + 4, y + 2, 2, 3, c); box(x + 6, y + 3, 1, 1, c); }
-    function frame(x, y, w, h, c, bg) { box(x, y, w, h, c); box(x + 2, y + 2, w - 4, h - 4, bg == null ? 0 : bg); }
-    function header(s, r) { box(0, 0, W, 13, 3); T(s, 4, 3, 0); if (r != null) T(String(r), W - 4, 3, 1, 8, "right"); }
-    function footer(s) { box(0, H - 12, W, 12, 1); T(s, 4, H - 10, 3); }
-    function snap() {
-      var im = C.getImageData(0, 0, W, H), d = im.data;
-      for (var i = 0; i < d.length; i += 4) {
-        var b = 0, bd = 1e9;
-        for (var k = 0; k < 4; k++) { var p = PAL[k], r = d[i] - p[0], g = d[i + 1] - p[1], bl = d[i + 2] - p[2], dd = r * r + g * g + bl * bl; if (dd < bd) { bd = dd; b = k; } }
-        d[i] = PAL[b][0]; d[i + 1] = PAL[b][1]; d[i + 2] = PAL[b][2]; d[i + 3] = 255;
-      }
-      C.putImageData(im, 0, 0);
-    }
-
-    // ---- screens
-    var MENU = [["ABOUT ME", "about"], ["QUEST LOG", "quests"], ["INVENTORY", "items"], ["BADGES", "badges"], ["WARP ZONE", "warp"], ["SNAKE", "snake"]];
-    var ITEMS = [["FLUTTER", "APPS FOR EVERY", "POCKET"], ["PYTHON", "ROBOTS, SCRIPTS", "AND AUTOMATIONS"], ["FLASK", "SMALL, FAST", "BACKENDS"], ["JS", "MAKES THE WEB", "MOVE"], ["REACT", "INTERFACES THAT", "FEEL INSTANT"],
-      ["TAILWIND", "STYLES AT THE", "SPEED OF THOUGHT"], ["MYSQL", "KEEPS THE DATA", "IN ORDER"], ["REST API", "SO SYSTEMS CAN", "TALK TO EACH OTHER"], ["HTML", "THE BONES OF", "EVERY PAGE"], ["CSS", "AND EVERYTHING", "YOU SEE"]];
-    var BADGES = [["PM AND AGILE", "SANTANDER"], ["MARKETING VOICES", "NEXTUMA"], ["CYBERSECURITY", "UTAD C-ACADEMY"], ["LEADING DEVS", "LINKEDIN LEARNING"]];
-    var WARPS = [["LINKEDIN", "/IN/GHANOBREGA", "li"], ["GITHUB", "@GHANOBREGAA", "gh"], ["INSTAGRAM", "@GHANOBREGA", "ig"]];
-    var sub = 0; // cursor inside a screen
-
-    function drawBoot(t) {
-      fill(0);
-      var y = Math.min(44, -30 + t * 70);
-      T("gn", 80, y, 3, 24, "center"); box(104, y + 18, 8, 3, (t * 3 | 0) % 2 ? 0 : 2);
-      if (t > 1.15) T("POCKET", 80, y + 34, 2, 8, "center");
-      if (t > 1.7) T("(C) " + new Date().getFullYear() + " GN", 80, 118, 1, 8, "center");
-    }
-    function drawMenu(t) {
-      fill(0); header("MAIN MENU", "P1");
-      MENU.forEach(function (m, i) {
-        var y = 20 + i * 17;
-        if (i === sel) { box(6, y - 4, 148, 15, 1); arrow(10 + (still ? 0 : Math.round(Math.sin(t * 8))), y, 3); }
-        T(m[0], 24, y, i === sel ? 3 : 2);
-      });
-      footer("A OPEN   B BACK");
-    }
-    function drawAbout(t) {
-      fill(0); header("ABOUT ME");
-      var rows = [["NAME", "GUILHERME"], ["CLASS", "FULL-STACK"], ["LVL", age], ["XP", xp + " YEARS"], ["GUILD", "GRUPO AFA"]];
-      rows.forEach(function (r, i) { T(r[0], 6, 19 + i * 12, 2); T(r[1], 56, 19 + i * 12, 3); });
-      box(6, 81, 148, 2, 1);
-      T("SPECIAL MOVES", 6, 88, 2);
-      ["SHIP APPS", "WRITE APIS", "AUTOMATE IT ALL"].forEach(function (s, i) { var y = 100 + i * 10; if ((t * 2 | 0) % 3 === i) arrow(6, y, 3); T(s, 18, y, 3); });
-      footer("B BACK");
-    }
-    function drawQuests(t) {
-      fill(0); header("QUEST LOG", "2");
-      T("GRUPO AFA", 6, 19, 3); T("2022 - NOW", 6, 30, 2); T("SOFTWARE DEV", 6, 41, 3);
-      if ((t * 2 | 0) % 2) box(6, 54, 6, 6, 3); T("ACTIVE", 16, 53, 3);
-      box(6, 66, 148, 2, 1);
-      T("SAVOY SIGNATURE", 6, 74, 3); T("2021 - 2022", 6, 85, 2); T("DEVELOPER", 6, 96, 3);
-      box(6, 109, 6, 6, 2); T("CLEARED", 16, 108, 2);
-      footer("B BACK");
-    }
-    function drawItems(t) {
-      fill(0); header("INVENTORY", (sub + 1) + "/10");
-      ITEMS.forEach(function (it, i) {
-        var x = i % 2 ? 82 : 4, y = 17 + (i >> 1) * 15;
-        if (i === sub) box(x, y - 2, 74, 13, 1);
-        box(x + 3, y + 1, 6, 6, i === sub ? 3 : 2); T(it[0], x + 12, y, 3);
-      });
-      frame(4, 94, 152, 36, 3); var it = ITEMS[sub]; T(it[1], 9, 101, 3); T(it[2], 9, 113, 3);
-      footer("B BACK");
-    }
-    function drawBadges(t) {
-      fill(0); header("BADGES", "4/4");
-      BADGES.forEach(function (b, i) {
-        var y = 18 + i * 28, s = i === sub;
-        if (s) box(4, y - 3, 152, 26, 1);
-        // a little pixel medal
-        box(8, y + 1, 8, 8, s ? 3 : 2); box(10, y + 3, 4, 4, s ? 1 : 0); box(9, y + 9, 2, 4, 2); box(13, y + 9, 2, 4, 2);
-        if (s && (t * 4 | 0) % 2) box(18, y - 1, 2, 2, 3);
-        T(b[0], 22, y, 3); T(b[1], 22, y + 11, 2);
-      });
-      footer("B BACK");
-    }
-    function drawWarp(t) {
-      fill(0); header("WARP ZONE");
-      WARPS.forEach(function (w, i) {
-        var x = 10 + i * 50, y = 26, s = i === sub;
-        frame(x, y, 40, 54, 3, s ? 3 : 1);
-        if (s) { for (var k = 0; k < 4; k++) { var r = ((t * 30 + k * 7) % 26) | 0; box(x + 20 - r * 0.6, y + 27 - r * 0.8, r * 1.2, 2, k % 2 ? 1 : 2); } }
-        box(x + 30, y + 26, 3, 4, s ? 1 : 3);
-        T(w[2].toUpperCase(), x + 20, y + 60, s ? 3 : 2, 8, "center");
-      });
-      var w = WARPS[sub]; frame(4, 98, 152, 30, 3); T(w[0], 80, 103, 3, 8, "center"); T(w[1], 80, 115, 2, 8, "center");
-      footer("A WARP   B BACK");
-    }
-
-    // ---- snake
-    var sn = {};
-    function snakeReset() { sn = { body: [[6, 8], [5, 8], [4, 8]], dir: [1, 0], next: [1, 0], food: null, score: 0, over: false, paused: false, acc: 0, step: 0.14 }; placeFood(); }
-    function placeFood() { do { sn.food = [Math.random() * 20 | 0, Math.random() * 15 | 0]; } while (sn.body.some(function (b) { return b[0] === sn.food[0] && b[1] === sn.food[1]; })); }
-    function snakeTick() {
-      sn.dir = sn.next; var h = sn.body[0], n = [h[0] + sn.dir[0], h[1] + sn.dir[1]];
-      if (n[0] < 0 || n[0] > 19 || n[1] < 0 || n[1] > 14 || sn.body.some(function (b, i) { return i < sn.body.length - 1 && b[0] === n[0] && b[1] === n[1]; })) {
-        sn.over = true; if (sn.score > best) { best = sn.score; try { localStorage.setItem("gn-snake", best); } catch (e) {} }
-        beep(440, 0.12); setTimeout(function () { beep(330, 0.12); }, 120); setTimeout(function () { beep(220, 0.3, 0.05, 110); }, 240); return;
-      }
-      sn.body.unshift(n);
-      if (n[0] === sn.food[0] && n[1] === sn.food[1]) { sn.score++; sn.step = Math.max(0.065, sn.step - 0.005); beep(1568, 0.05); placeFood(); } else sn.body.pop();
-    }
-    function drawSnake(t, dt) {
-      if (!sn.over && !sn.paused) { sn.acc += dt; while (sn.acc >= sn.step && !sn.over) { sn.acc -= sn.step; snakeTick(); } }
-      fill(0); header("SNAKE", "SC " + sn.score);
-      box(0, 13, W, 2, 1);
-      if ((t * 3 | 0) % 2 || sn.over) { var f = sn.food; box(f[0] * 8 + 2, 16 + f[1] * 8 + 2, 4, 4, 2); box(f[0] * 8 + 3, 16 + f[1] * 8 + 1, 2, 6, 2); box(f[0] * 8 + 1, 16 + f[1] * 8 + 3, 6, 2, 2); }
-      sn.body.forEach(function (b, i) { box(b[0] * 8 + 1, 16 + b[1] * 8 + 1, 7 - (i ? 1 : 0), 7 - (i ? 1 : 0), 3); });
-      if (sn.paused) { frame(34, 58, 92, 24, 3); T("PAUSED", 80, 66, 3, 8, "center"); }
-      if (sn.over) { frame(14, 44, 132, 56, 3); T("GAME OVER", 80, 52, 3, 8, "center"); T("BEST " + best, 80, 66, 2, 8, "center"); T("A RETRY B EXIT", 80, 82, 3, 8, "center"); }
-    }
-
-    var DRAW = { boot: drawBoot, menu: drawMenu, about: drawAbout, quests: drawQuests, items: drawItems, badges: drawBadges, warp: drawWarp, snake: drawSnake };
-    function go(s) { state = s; tState = 0; sub = 0; if (s === "snake") snakeReset(); kick(); }
-    function render(dt) {
-      tState += dt; C.imageSmoothingEnabled = false;
-      DRAW[state](tState, dt);
-      if (toast && toastT > 0) { toastT -= dt; frame(18, 56, 124, 26, 3); T(toast, 80, 65, 3, 8, "center"); }
-      snap(); if (onLcd) onLcd();
-      if (state === "boot" && tState > 2.6) go("menu");
-    }
-    function loop(ts) {
-      raf = 0; if (!on) return;
-      var dt = last ? Math.min(0.1, (ts - last) / 1000) : 0.016; last = ts;
-      render(dt);
-      if (visible) raf = requestAnimationFrame(loop); else last = 0;
-    }
-    function kick() { if (on && visible && !raf) { last = 0; raf = requestAnimationFrame(loop); } }
-
-    // ---- power and input
-    function setStatus() {
-      stDot.classList.toggle("on", on && (engaged || touch));
-      stT.textContent = !on ? (touch ? "tap power to switch it on" : "press power, or click the console") : touch ? "tap the buttons to play" : engaged ? "keyboard is plugged in" : "click the console to use your keyboard";
-      dev.classList.toggle("engaged", on && engaged && !touch);
-    }
-    function power(v) {
-      on = v; dev.classList.toggle("on", on); document.getElementById("gb-power").setAttribute("aria-pressed", on);
-      if (on) {
-        if (document.fonts && document.fonts.load) document.fonts.load("8px " + FONT).catch(function () {});
-        beep(1047, 0.09); setTimeout(function () { beep(2093, 0.45, 0.035); }, 1150);
-        sel = 0; go("boot");
-      } else { beep(300, 0.18, 0.04, 80); state = "off"; if (raf) cancelAnimationFrame(raf); raf = 0; }
-      setStatus();
-    }
-    function open(link) {
-      var a = document.createElement("a"); a.href = link; a.target = "_blank"; a.rel = "noopener"; document.body.appendChild(a); a.click(); a.remove();
-    }
-    function press(k) {
-      if (!on) { if (k === "a" || k === "start") power(true); return; }
-      kick();
-      if (state === "boot") { if (k === "a" || k === "start") go("menu"); return; }
-      if (state === "menu") {
-        if (k === "up" || k === "down") { sel = (sel + (k === "up" ? -1 : 1) + MENU.length) % MENU.length; blip(); }
-        else if (k === "a" || k === "right" || k === "start") { okS(); go(MENU[sel][1]); }
-        else if (k === "select") { toast = "HI " + (best ? "SNAKE " + best : "THERE"); toastT = 1.2; blip(); }
-        return;
-      }
-      if (k === "b") { backS(); go("menu"); return; }
-      if (state === "items") {
-        var d = { up: -2, down: 2, left: -1, right: 1 }[k];
-        if (d) { var n = sub + d; if (n >= 0 && n < ITEMS.length) { sub = n; blip(); } }
-      } else if (state === "badges") {
-        if (k === "up" || k === "down") { sub = (sub + (k === "up" ? -1 : 1) + BADGES.length) % BADGES.length; blip(); }
-        else if (k === "a") { toast = "BADGE EARNED"; toastT = 1; okS(); }
-      } else if (state === "warp") {
-        if (k === "left" || k === "right" || k === "up" || k === "down") { sub = (sub + (k === "left" || k === "up" ? -1 : 1) + 3) % 3; blip(); }
-        else if (k === "a") {
-          var row = document.querySelector('.ct-row[data-k="' + WARPS[sub][2] + '"]');
-          toast = "WARPING..."; toastT = 1.2; beep(523, 0.35, 0.04, 2093);
-          if (row) open(row.href);
-        }
-      } else if (state === "snake") {
-        var dir = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] }[k];
-        if (dir && !sn.over) { if (dir[0] !== -sn.dir[0] || dir[1] !== -sn.dir[1]) sn.next = dir; if (sn.paused) sn.paused = false; }
-        else if (k === "a" && sn.over) { okS(); snakeReset(); }
-        else if (k === "start" && !sn.over) { sn.paused = !sn.paused; blip(); }
-      }
-    }
-    // the on-screen buttons
-    var BTN = {}; Array.prototype.forEach.call(dev.querySelectorAll("[data-k]"), function (b) { BTN[b.dataset.k] = b; });
-    function flash(k) { if (hit3d) hit3d(k, 0.13); var b = BTN[k]; if (!b) return; b.classList.add("down-k"); clearTimeout(b._t); b._t = setTimeout(function () { b.classList.remove("down-k"); }, 120); }
-    Array.prototype.forEach.call(dev.querySelectorAll("[data-k]"), function (b) {
-      b.addEventListener("pointerdown", function (e) { e.preventDefault(); engaged = true; setStatus(); press(b.dataset.k); if (navigator.vibrate && touch) navigator.vibrate(8); });
-    });
-    document.getElementById("gb-power").addEventListener("click", function () { engaged = true; power(!on); });
-    document.getElementById("gb-hint").addEventListener("click", function () { engaged = true; power(true); });
-    sndBtn.addEventListener("click", function () { sound = !sound; sndBtn.textContent = sound ? "sound on" : "sound off"; sndBtn.setAttribute("aria-pressed", sound); if (sound) blip(); });
-    stage.addEventListener("pointerdown", function () { if (!engaged) { engaged = true; setStatus(); } });
-    document.addEventListener("pointerdown", function (e) { if (engaged && !stage.contains(e.target) && !e.target.closest(".gbs-status")) { engaged = false; setStatus(); } });
-    var KEYS = { ArrowUp: "up", KeyW: "up", ArrowDown: "down", KeyS: "down", ArrowLeft: "left", KeyA: "left", ArrowRight: "right", KeyD: "right", Enter: "a", KeyP: "a", Backspace: "b", KeyL: "b", Escape: "b", Space: "start", ShiftLeft: "select", ShiftRight: "select" };
-    var kbds = sec.querySelectorAll(".gbs-keys kbd"), KBD = { up: 0, down: 1, left: 2, right: 3, a: 4, b: 5, start: 6 };
-    addEventListener("keydown", function (e) {
-      if (!engaged || !visible || e.metaKey || e.ctrlKey || e.altKey) return;
-      var t = e.target; if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
-      var k = KEYS[e.code]; if (!k) return;
-      e.preventDefault(); if (e.repeat && !(state === "menu" || state === "items" || state === "badges")) return;
-      flash(k); press(k);
-      var kb = kbds[KBD[k]]; if (kb) { kb.classList.add("hit"); clearTimeout(kb._t); kb._t = setTimeout(function () { kb.classList.remove("hit"); }, 140); }
-    });
-    if ("IntersectionObserver" in window) new IntersectionObserver(function (en) {
-      visible = en[0].isIntersecting;
-      if (!visible && state === "snake" && sn && !sn.over) sn.paused = true;
-      kick();
-    }, { threshold: 0.15 }).observe(stage); else visible = true;
-    // the console leans toward the cursor
-    if (!touch && !still) {
-      stage.addEventListener("pointermove", function (e) { if (is3d) return; var r = dev.getBoundingClientRect(), x = (e.clientX - r.left) / r.width - 0.5, y = (e.clientY - r.top) / r.height - 0.5; dev.style.transform = "rotateY(" + (x * 10).toFixed(2) + "deg) rotateX(" + (-y * 8).toFixed(2) + "deg)"; });
-      stage.addEventListener("pointerleave", function () { dev.style.transform = ""; });
-    }
-    setStatus();
-
-    // ---- the real thing: the console as a three.js model. The 2D canvas above becomes its screen.
-    var gl3 = document.getElementById("gb-gl");
-    if (!gl3) return;
-    var started3 = false;
-    function go3() { if (started3) return; started3 = true; loadThree().then(build3).catch(function () { gl3.style.display = "none"; }); }
-    if ("IntersectionObserver" in window) { var near3 = new IntersectionObserver(function (en) { if (en[0].isIntersecting) { near3.disconnect(); go3(); } }, { rootMargin: "120% 0px" }); near3.observe(sec); } else go3();
-
-    function build3(mod) {
+    // ---- the objects, one per stage, built in three.js
+    var started = false;
+    function go3() { if (started || !gl) return; started = true; loadThree().then(build).catch(function () { gl.style.display = "none"; }); }
+    if ("IntersectionObserver" in window) { var nr = new IntersectionObserver(function (en) { if (en[0].isIntersecting) { nr.disconnect(); go3(); } }, { rootMargin: "150% 0px" }); nr.observe(sec); } else go3();
+    function build(mod) {
       var THREE = mod.THREE, RoomEnvironment = mod.RoomEnvironment, renderer;
-      try { renderer = new THREE.WebGLRenderer({ canvas: gl3, antialias: true, alpha: true }); } catch (e) { gl3.style.display = "none"; return; }
-      renderer.setClearColor(0, 0); renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.0;
-      var scene = new THREE.Scene(), camera = new THREE.PerspectiveCamera(26, 1, 0.1, 50);
-      var pmrem = new THREE.PMREMGenerator(renderer); scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
-      var key = new THREE.DirectionalLight(0xffffff, 1.9); key.position.set(3, 4, 6); scene.add(key);
-      var fillL = new THREE.DirectionalLight(0xffffff, 0.35); fillL.position.set(-4, -1, 4); scene.add(fillL);
-      var rim = new THREE.DirectionalLight(0xf7a8a9, 1.6); rim.position.set(-3, 2.5, -4); scene.add(rim);
-      scene.add(new THREE.HemisphereLight(0xffffff, 0x18181b, 0.35));
-      var css = getComputedStyle(root), SANS = (css.getPropertyValue("--sans") || "sans-serif").trim(), MONO = (css.getPropertyValue("--mono") || "monospace").trim();
+      try { renderer = new THREE.WebGLRenderer({ canvas: gl, antialias: true, alpha: true }); } catch (e) { gl.style.display = "none"; return; }
+      renderer.setClearColor(0, 0); renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      var scene = new THREE.Scene(), camera = new THREE.PerspectiveCamera(40, 1, 0.05, 120); camera.position.set(0, 0, 5);
+      var pm = new THREE.PMREMGenerator(renderer); scene.environment = pm.fromScene(new RoomEnvironment(), 0.04).texture;
+      var kl = new THREE.DirectionalLight(0xffffff, 1.6); kl.position.set(3, 4, 5); scene.add(kl);
+      var pl = new THREE.DirectionalLight(0xf7a8a9, 2.4); pl.position.set(-4, -2, 2); scene.add(pl);
+      scene.add(new THREE.HemisphereLight(0xffffff, 0x101012, 0.4));
+      var PINK = 0xf7a8a9;
+      var white = new THREE.MeshPhysicalMaterial({ color: 0xf2f2f4, roughness: 0.25, clearcoat: 1, clearcoatRoughness: 0.15 });
+      var dark = new THREE.MeshPhysicalMaterial({ color: 0x16161a, roughness: 0.35, clearcoat: 0.8, clearcoatRoughness: 0.2 });
+      var pinkM = new THREE.MeshPhysicalMaterial({ color: PINK, roughness: 0.3, clearcoat: 1, clearcoatRoughness: 0.2 });
+      var glowM = new THREE.MeshBasicMaterial({ color: PINK, toneMapped: false });
+      var metal = new THREE.MeshStandardMaterial({ color: 0xbfc0c6, roughness: 0.25, metalness: 1 });
+      function ctex(w, h, draw) { var c = document.createElement("canvas"); c.width = w; c.height = h; draw(c.getContext("2d"), w, h); var t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; }
+      var glowTex = ctex(128, 128, function (x) { var r0 = x.createRadialGradient(64, 64, 0, 64, 64, 64); r0.addColorStop(0, "rgba(247,168,169,1)"); r0.addColorStop(0.35, "rgba(247,168,169,.35)"); r0.addColorStop(1, "rgba(247,168,169,0)"); x.fillStyle = r0; x.fillRect(0, 0, 128, 128); });
+      function glow(sz) { var s = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true })); s.scale.setScalar(sz); return s; }
+      var objs = [];
 
-      function shape4(w, h, r) { // rounded rect, r = [tl, tr, br, bl]
-        var s = new THREE.Shape(), x = -w / 2, y = -h / 2;
-        s.moveTo(x + r[3], y); s.lineTo(x + w - r[2], y); s.quadraticCurveTo(x + w, y, x + w, y + r[2]);
-        s.lineTo(x + w, y + h - r[1]); s.quadraticCurveTo(x + w, y + h, x + w - r[1], y + h);
-        s.lineTo(x + r[0], y + h); s.quadraticCurveTo(x, y + h, x, y + h - r[0]); s.lineTo(x, y + r[3]); s.quadraticCurveTo(x, y, x + r[3], y); return s;
-      }
-      function rr(w, h, r) { return shape4(w, h, [r, r, r, r]); }
-      function ext(shape, depth, bevel, seg) {
-        var g = new THREE.ExtrudeGeometry(shape, { depth: depth, bevelEnabled: !!bevel, bevelThickness: bevel || 0, bevelSize: bevel || 0, bevelSegments: seg || 4, curveSegments: 24 });
-        g.translate(0, 0, -depth / 2); return g;
-      }
-      function canvasTex(w, h, draw) { var c = document.createElement("canvas"); c.width = w; c.height = h; draw(c.getContext("2d"), w, h); var t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; return t; }
-
-      // ---- materials: matte dark plastic, glossy bezel, soft pink rubber buttons
-      var plastic = new THREE.MeshPhysicalMaterial({ color: 0x1d1d21, roughness: 0.6, metalness: 0, clearcoat: 0.2, clearcoatRoughness: 0.6, envMapIntensity: 0.35 });
-      var bezelM = new THREE.MeshPhysicalMaterial({ color: 0x0a0a0c, roughness: 0.3, clearcoat: 0.6, clearcoatRoughness: 0.2, envMapIntensity: 0.25 });
-      var rubber = new THREE.MeshStandardMaterial({ color: 0x0f0f11, roughness: 0.5, metalness: 0.05, envMapIntensity: 0.5 });
-      var pinkM = new THREE.MeshPhysicalMaterial({ color: 0xf0939a, roughness: 0.38, clearcoat: 0.5, clearcoatRoughness: 0.3, envMapIntensity: 0.6 });
-      var holeM = new THREE.MeshBasicMaterial({ color: 0x050506 });
-      var gray = new THREE.MeshStandardMaterial({ color: 0x2c2c31, roughness: 0.75 });
-
-      var BW = 1.8, BH = 2.96, BD = 0.36, BV = 0.05, F = BD / 2 + BV; // body, front face at z = F
-      var root3 = new THREE.Group(), model = new THREE.Group(); root3.add(model); scene.add(root3);
-      var body = new THREE.Mesh(ext(shape4(BW - 2 * BV, BH - 2 * BV, [0.14, 0.14, 0.42, 0.14]), BD, BV, 10), plastic); model.add(body);
-      // a seam around the edge, where the two shells meet
-      var seam = new THREE.Mesh(ext(shape4(BW + 0.004, BH + 0.004, [0.19, 0.19, 0.47, 0.19]), 0.012), holeM); seam.position.z = -0.03; model.add(seam);
-      var slotTop = new THREE.Mesh(new THREE.BoxGeometry(BW - 0.22, 0.008, 0.012), holeM); slotTop.position.set(0, BH / 2 - 0.2, F + 0.001); model.add(slotTop);
-
-      // ---- the screen
-      var bez = new THREE.Mesh(ext(shape4(1.46, 1.26, [0.07, 0.07, 0.3, 0.07]), 0.016), bezelM); bez.position.set(0, 0.64, F + 0.006); model.add(bez);
-      var lcdTex = new THREE.CanvasTexture(lcd); lcdTex.colorSpace = THREE.SRGBColorSpace; lcdTex.magFilter = THREE.NearestFilter; lcdTex.minFilter = THREE.LinearFilter; lcdTex.generateMipmaps = false;
-      var lcdM = new THREE.MeshBasicMaterial({ map: lcdTex, toneMapped: false });
-      var LW = 0.9, LH = LW * 144 / 160;
-      var lcdMesh = new THREE.Mesh(new THREE.PlaneGeometry(LW, LH), lcdM); lcdMesh.position.set(0, 0.67, F + 0.0145); lcdMesh.userData.k = "screen"; model.add(lcdMesh);
-      var lcdRim = new THREE.Mesh(new THREE.PlaneGeometry(LW + 0.03, LH + 0.03), holeM); lcdRim.position.set(0, 0.67, F + 0.0143); model.add(lcdRim);
-      // the bezel print and the power LED
-      var bezPrint = canvasTex(730, 630, function (g, w, h) {
-        var u = w / 1.46;
-        g.strokeStyle = "#f7a8a9"; g.lineWidth = 3; g.globalAlpha = 0.75;
-        g.beginPath(); g.moveTo(0.08 * u, 0.1 * u); g.lineTo(0.42 * u, 0.1 * u); g.moveTo(1.04 * u, 0.1 * u); g.lineTo(1.38 * u, 0.1 * u); g.stroke();
-        g.strokeStyle = "#3d3d44"; g.beginPath(); g.moveTo(0.08 * u, 0.115 * u); g.lineTo(0.42 * u, 0.115 * u); g.moveTo(1.04 * u, 0.115 * u); g.lineTo(1.38 * u, 0.115 * u); g.stroke();
-        g.globalAlpha = 1; g.fillStyle = "#7c7c84"; g.font = "500 15px " + MONO; g.textAlign = "center"; g.textBaseline = "middle"; g.fillText("160 × 144 · 4 SHADES", 0.73 * u, 0.108 * u);
-        g.font = "500 11px " + MONO; g.fillText("POWER", 0.11 * u, 0.53 * u);
+      // 1 · idea: a light bulb with a glowing filament
+      (function () {
+        var o = new THREE.Group();
+        var glass = new THREE.Mesh(new THREE.SphereGeometry(0.62, 48, 32), new THREE.MeshPhysicalMaterial({ color: 0xffffff, roughness: 0.05, transmission: 0.9, thickness: 0.4, transparent: true, opacity: 0.55, clearcoat: 1 }));
+        glass.position.y = 0.25; o.add(glass);
+        var neck = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.42, 0.34, 40, 1, true), new THREE.MeshPhysicalMaterial({ color: 0xffffff, roughness: 0.05, transparent: true, opacity: 0.45 })); neck.position.y = -0.35; o.add(neck);
+        for (var k = 0; k < 4; k++) { var ring = new THREE.Mesh(new THREE.TorusGeometry(0.27 - k * 0.012, 0.035, 12, 40), metal); ring.rotation.x = Math.PI / 2; ring.position.y = -0.58 - k * 0.075; o.add(ring); }
+        var tip = new THREE.Mesh(new THREE.SphereGeometry(0.12, 24, 12), dark); tip.position.y = -0.9; tip.scale.y = 0.6; o.add(tip);
+        var pts = []; for (var j = 0; j <= 40; j++) { var t = j / 40; pts.push(new THREE.Vector3((t - 0.5) * 0.5, 0.18 + Math.sin(t * Math.PI * 6) * 0.06, 0)); }
+        var fil = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 80, 0.014, 6), glowM); o.add(fil);
+        [-0.25, 0.25].forEach(function (x) { var w = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.62, 6), metal); w.position.set(x, -0.12, 0); o.add(w); });
+        var gl1 = glow(2.4); gl1.position.y = 0.2; o.add(gl1); o.userData.glow = gl1;
+        objs.push(o);
+      })();
+      // 2 · design: a pointer drawing a bezier curve, handles and all
+      (function () {
+        var o = new THREE.Group();
+        var a = new THREE.Vector3(-0.95, -0.45, 0), b = new THREE.Vector3(-0.6, 0.75, 0.15), c = new THREE.Vector3(0.45, -0.75, -0.15), d = new THREE.Vector3(0.85, 0.4, 0);
+        var curve = new THREE.CubicBezierCurve3(a, b, c, d);
+        o.add(new THREE.Mesh(new THREE.TubeGeometry(curve, 120, 0.035, 10), pinkM));
+        [[a, b], [d, c]].forEach(function (q) {
+          var ln = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, q[0].distanceTo(q[1]), 6), white); ln.position.copy(q[0].clone().add(q[1]).multiplyScalar(0.5)); ln.lookAt(q[1]); ln.rotateX(Math.PI / 2); o.add(ln);
+          var anchor = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.13, 0.13), white); anchor.position.copy(q[0]); o.add(anchor);
+          var hd = new THREE.Mesh(new THREE.SphereGeometry(0.07, 20, 12), white); hd.position.copy(q[1]); o.add(hd);
+        });
+        var arrow = new THREE.Shape(); arrow.moveTo(0, 0); arrow.lineTo(0, -0.62); arrow.lineTo(0.15, -0.47); arrow.lineTo(0.26, -0.72); arrow.lineTo(0.36, -0.67); arrow.lineTo(0.25, -0.43); arrow.lineTo(0.46, -0.43); arrow.closePath();
+        var cur = new THREE.Mesh(new THREE.ExtrudeGeometry(arrow, { depth: 0.08, bevelEnabled: true, bevelThickness: 0.02, bevelSize: 0.02, bevelSegments: 3 }), white);
+        cur.position.set(0.85, 0.4, 0.12); o.add(cur);
+        var gl2 = glow(2.2); o.add(gl2); o.userData.glow = gl2;
+        objs.push(o);
+      })();
+      // 3 · API: systems talking, packets running along the links
+      (function () {
+        var o = new THREE.Group(), nodes = [new THREE.Vector3(0, 0, 0)];
+        for (var k = 0; k < 6; k++) { var an = k / 6 * Math.PI * 2; nodes.push(new THREE.Vector3(Math.cos(an) * 1.0, Math.sin(an) * 0.8, (k % 2 ? 0.35 : -0.35))); }
+        var hub = new THREE.Mesh(new THREE.IcosahedronGeometry(0.28, 1), pinkM); o.add(hub);
+        var hubE = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.IcosahedronGeometry(0.3, 1)), new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.6 })); o.add(hubE);
+        var packets = [];
+        nodes.slice(1).forEach(function (n, k) {
+          var m = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.2, 0.2), k % 2 ? white : dark); m.position.copy(n); m.rotation.set(k, k * 0.7, 0); o.add(m);
+          var e = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(0.21, 0.21, 0.21)), new THREE.LineBasicMaterial({ color: PINK })); e.position.copy(n); e.rotation.copy(m.rotation); o.add(e);
+          var ln = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.01, n.length(), 6), new THREE.MeshBasicMaterial({ color: 0x8c8c94 })); ln.position.copy(n.clone().multiplyScalar(0.5)); ln.lookAt(n); ln.rotateX(Math.PI / 2); o.add(ln);
+          var pk = new THREE.Mesh(new THREE.SphereGeometry(0.045, 12, 8), glowM); pk.userData = { to: n, ph: k / 6, out: k % 2 === 0 }; o.add(pk); packets.push(pk);
+        });
+        var gl3 = glow(2.6); o.add(gl3); o.userData.glow = gl3; o.userData.packets = packets;
+        objs.push(o);
+      })();
+      // 4 · app: a phone with a little dashboard on it
+      (function () {
+        var o = new THREE.Group();
+        var sh = new THREE.Shape(), w = 0.78, h = 1.6, r = 0.14; sh.moveTo(-w / 2 + r, -h / 2); sh.lineTo(w / 2 - r, -h / 2); sh.quadraticCurveTo(w / 2, -h / 2, w / 2, -h / 2 + r); sh.lineTo(w / 2, h / 2 - r); sh.quadraticCurveTo(w / 2, h / 2, w / 2 - r, h / 2); sh.lineTo(-w / 2 + r, h / 2); sh.quadraticCurveTo(-w / 2, h / 2, -w / 2, h / 2 - r); sh.lineTo(-w / 2, -h / 2 + r); sh.quadraticCurveTo(-w / 2, -h / 2, -w / 2 + r, -h / 2);
+        var bodyG = new THREE.ExtrudeGeometry(sh, { depth: 0.08, bevelEnabled: true, bevelThickness: 0.03, bevelSize: 0.03, bevelSegments: 5, curveSegments: 16 }); bodyG.translate(0, 0, -0.04);
+        o.add(new THREE.Mesh(bodyG, dark));
+        var scr = ctex(390, 800, function (x, W2, H2) {
+          x.fillStyle = "#0d0d10"; x.fillRect(0, 0, W2, H2);
+          x.fillStyle = "#fff"; x.font = "600 30px sans-serif"; x.fillText("12 480", 30, 120); x.fillStyle = "#8c8c94"; x.font = "400 18px sans-serif"; x.fillText("Total visitors", 30, 72);
+          var gr = x.createLinearGradient(0, 200, 0, 380); gr.addColorStop(0, "rgba(247,168,169,.55)"); gr.addColorStop(1, "rgba(247,168,169,0)");
+          var D = [40, 70, 55, 95, 80, 130, 115, 150]; x.beginPath(); x.moveTo(30, 380); D.forEach(function (v, k) { x.lineTo(30 + k * 47, 360 - v); }); x.lineTo(30 + 7 * 47, 380); x.closePath(); x.fillStyle = gr; x.fill();
+          x.beginPath(); D.forEach(function (v, k) { if (k) x.lineTo(30 + k * 47, 360 - v); else x.moveTo(30, 360 - v); }); x.strokeStyle = "#f7a8a9"; x.lineWidth = 5; x.stroke();
+          for (var k = 0; k < 4; k++) { x.fillStyle = "#18181c"; x.fillRect(30 + (k % 2) * 170, 430 + Math.floor(k / 2) * 130, 160, 115); x.fillStyle = "#f7a8a9"; x.fillRect(45 + (k % 2) * 170, 515 + Math.floor(k / 2) * 130, 40 + k * 22, 8); }
+          x.fillStyle = "#000"; x.fillRect(150, 18, 90, 24);
+        });
+        var sc = new THREE.Mesh(new THREE.PlaneGeometry(w - 0.06, h - 0.06), new THREE.MeshBasicMaterial({ map: scr, toneMapped: false })); sc.position.z = 0.072; o.add(sc);
+        var gl4 = glow(2.6); gl4.position.z = -0.2; o.add(gl4); o.userData.glow = gl4;
+        objs.push(o);
+      })();
+      // 5 · production: a rocket, engines on
+      (function () {
+        var o = new THREE.Group(), P = [];
+        [[0, 0.95], [0.12, 0.85], [0.24, 0.6], [0.3, 0.3], [0.31, -0.2], [0.27, -0.55], [0.2, -0.65], [0, -0.65]].forEach(function (q) { P.push(new THREE.Vector2(q[0], q[1])); });
+        var hull = new THREE.Mesh(new THREE.LatheGeometry(P.reverse(), 48), white); o.add(hull);
+        var nose = new THREE.Mesh(new THREE.ConeGeometry(0.205, 0.32, 48), pinkM); nose.position.y = 0.8; o.add(nose);
+        var win = new THREE.Mesh(new THREE.TorusGeometry(0.1, 0.025, 12, 32), metal); win.position.set(0, 0.25, 0.3); o.add(win);
+        var glassW = new THREE.Mesh(new THREE.CircleGeometry(0.1, 32), new THREE.MeshPhysicalMaterial({ color: 0x1a2030, roughness: 0.05, clearcoat: 1 })); glassW.position.set(0, 0.25, 0.298); o.add(glassW);
+        var fin = new THREE.Shape(); fin.moveTo(0, 0); fin.lineTo(0.3, -0.35); fin.lineTo(0.3, -0.55); fin.lineTo(0, -0.35); fin.closePath();
+        for (var k = 0; k < 3; k++) { var f = new THREE.Mesh(new THREE.ExtrudeGeometry(fin, { depth: 0.04, bevelEnabled: false }), pinkM); f.position.y = -0.15; var gF = new THREE.Group(); f.position.x = 0.26; f.position.z = -0.02; gF.add(f); gF.rotation.y = k * Math.PI * 2 / 3 + Math.PI / 2; o.add(gF); }
+        var noz = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.2, 0.14, 32), metal); noz.position.y = -0.72; o.add(noz);
+        var flame = new THREE.Mesh(new THREE.ConeGeometry(0.17, 0.7, 24, 1, true), new THREE.MeshBasicMaterial({ color: 0xffd9da, transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false })); flame.rotation.x = Math.PI; flame.position.y = -1.13; o.add(flame);
+        var flame2 = new THREE.Mesh(new THREE.ConeGeometry(0.26, 1.1, 24, 1, true), new THREE.MeshBasicMaterial({ color: PINK, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false })); flame2.rotation.x = Math.PI; flame2.position.y = -1.3; o.add(flame2);
+        var gl5 = glow(1.8); gl5.position.y = -1.0; o.add(gl5); o.userData.glow = gl5; o.userData.flames = [flame, flame2];
+        o.rotation.z = -0.5;
+        objs.push(o);
+      })();
+      objs.forEach(function (o) {
+        var wrap = new THREE.Group(); wrap.add(o); scene.add(wrap); o.userData.wrap = wrap;
+        o.traverse(function (m) { if (m.material) { m.material = m.material.clone(); m.material.transparent = true; m.userData.op = m.material.opacity; } });
       });
-      var bp = new THREE.Mesh(new THREE.PlaneGeometry(1.46, 1.26), new THREE.MeshBasicMaterial({ map: bezPrint, transparent: true, depthWrite: false })); bp.position.set(0, 0.64, F + 0.0145); model.add(bp);
-      var ledM = new THREE.MeshStandardMaterial({ color: 0x3b1d20, emissive: 0xf7a8a9, emissiveIntensity: 0, roughness: 0.3 });
-      var led = new THREE.Mesh(new THREE.SphereGeometry(0.022, 20, 12), ledM); led.scale.z = 0.5; led.position.set(-0.62, 0.71, F + 0.016); model.add(led);
-      var ledGlow = new THREE.PointLight(0xf7a8a9, 0, 0.5, 2); ledGlow.position.set(-0.62, 0.71, F + 0.08); model.add(ledGlow);
-      // glass over the bezel: catches the room's reflections
-      var glass = new THREE.Mesh(new THREE.ShapeGeometry(shape4(1.46, 1.26, [0.07, 0.07, 0.3, 0.07]), 24), new THREE.MeshPhysicalMaterial({ color: 0xffffff, roughness: 0.08, metalness: 0, transparent: true, opacity: 0.05, envMapIntensity: 0.6, depthWrite: false }));
-      glass.position.set(0, 0.64, F + 0.02); model.add(glass);
-      var screenGlow = new THREE.PointLight(0xf7c8ca, 0, 1.4, 2); screenGlow.position.set(0, 0.67, F + 0.35); model.add(screenGlow);
-
-      // ---- printing on the case: brand, labels
-      var print = canvasTex(720, 1184, function (g, w, h) {
-        var u = w / BW; function P(x, y) { return [(x + BW / 2) * u, (BH / 2 - y) * u]; }
-        g.textBaseline = "middle";
-        var b = P(-0.68, -0.11); g.font = "italic 700 64px " + SANS; g.fillStyle = "#ececf0"; g.textAlign = "left"; g.fillText("gn", b[0], b[1]);
-        var gw = g.measureText("gn").width; g.font = "300 60px " + SANS; g.fillStyle = "#8c8c94"; g.fillText("pocket", b[0] + gw + 6, b[1]);
-        g.fillStyle = "#6f6f77"; g.font = "500 22px " + MONO; g.textAlign = "center";
-        [["B", 0.2, -0.82], ["A", 0.56, -0.66]].forEach(function (l) { var q = P(l[1], l[2]); g.fillText(l[0], q[0], q[1]); });
-        g.font = "500 15px " + MONO;
-        [["SELECT", -0.2, -1.12], ["START", 0.12, -1.12]].forEach(function (l) { var q = P(l[1], l[2]); g.save(); g.translate(q[0], q[1]); g.rotate(-0.42); g.fillText(l[0], 0, 0); g.restore(); });
-        var o = P(-0.5, BH / 2 - 0.09); g.font = "500 14px " + MONO; g.fillText("◂ OFF · ON ▸", o[0], o[1]);
-      });
-      var pr = new THREE.Mesh(new THREE.PlaneGeometry(BW, BH), new THREE.MeshBasicMaterial({ map: print, transparent: true, depthWrite: false })); pr.position.z = F + 0.0008; model.add(pr);
-
-      // ---- d-pad: a cross that tips toward the direction you press
-      var dpadG = new THREE.Group(); dpadG.position.set(-0.46, -0.55, F); model.add(dpadG);
-      var well = new THREE.Mesh(new THREE.CircleGeometry(0.31, 48), new THREE.MeshStandardMaterial({ color: 0x141417, roughness: 0.8 })); well.position.z = 0.001; dpadG.add(well);
-      var A2 = 0.085, L2 = 0.25, cross = new THREE.Shape();
-      cross.moveTo(-A2, L2); cross.lineTo(A2, L2); cross.lineTo(A2, A2); cross.lineTo(L2, A2); cross.lineTo(L2, -A2); cross.lineTo(A2, -A2); cross.lineTo(A2, -L2); cross.lineTo(-A2, -L2); cross.lineTo(-A2, -A2); cross.lineTo(-L2, -A2); cross.lineTo(-L2, A2); cross.lineTo(-A2, A2); cross.closePath();
-      var dpad = new THREE.Mesh(ext(cross, 0.05, 0.014, 4), rubber); dpad.position.z = 0.04; dpad.userData.k = "dpad"; dpadG.add(dpad);
-      var dimple = new THREE.Mesh(new THREE.CircleGeometry(0.04, 32), new THREE.MeshStandardMaterial({ color: 0x08080a, roughness: 0.4 })); dimple.position.z = 0.0405; dpad.add(dimple);
-      [[0, 1], [0, -1], [1, 0], [-1, 0]].forEach(function (d) { // embossed arrows
-        var tri = new THREE.Shape(); tri.moveTo(0, 0.035); tri.lineTo(0.03, -0.015); tri.lineTo(-0.03, -0.015); tri.closePath();
-        var m = new THREE.Mesh(new THREE.ShapeGeometry(tri), new THREE.MeshStandardMaterial({ color: 0x26262b, roughness: 0.6 }));
-        m.position.set(d[0] * 0.18, d[1] * 0.18, 0.0405); m.rotation.z = Math.atan2(-d[0], d[1]); dpad.add(m);
-      });
-
-      // ---- A and B: domed buttons sitting in a slanted pill
-      var pill = new THREE.Mesh(ext(rr(0.74, 0.34, 0.17), 0.01), new THREE.MeshStandardMaterial({ color: 0x141417, roughness: 0.85 })); pill.position.set(0.38, -0.54, F + 0.001); pill.rotation.z = 0.42; model.add(pill);
-      var prof = [new THREE.Vector2(0.132, 0), new THREE.Vector2(0.132, 0.03), new THREE.Vector2(0.125, 0.058), new THREE.Vector2(0.1, 0.075), new THREE.Vector2(0.06, 0.083), new THREE.Vector2(0, 0.085)];
-      var btnGeo = new THREE.LatheGeometry(prof, 48); btnGeo.rotateX(Math.PI / 2);
-      function mkBtn(k, x, y) {
-        var hole = new THREE.Mesh(new THREE.CircleGeometry(0.142, 48), holeM); hole.position.set(x, y, F + 0.012); model.add(hole);
-        var m = new THREE.Mesh(btnGeo, pinkM); m.position.set(x, y, F - 0.01); m.userData.k = k; m.userData.z0 = F - 0.01; model.add(m); return m;
-      }
-      var bA = mkBtn("a", 0.56, -0.47), bB = mkBtn("b", 0.2, -0.63);
-      // select / start
-      function mkPill(k, x, y) {
-        var well2 = new THREE.Mesh(new THREE.ShapeGeometry(rr(0.27, 0.085, 0.0425), 16), holeM); well2.position.set(x, y, F + 0.001); well2.rotation.z = 0.42; model.add(well2);
-        var m = new THREE.Mesh(ext(rr(0.23, 0.055, 0.0275), 0.03, 0.008, 3), gray); m.position.set(x, y, F + 0.012); m.rotation.z = 0.42; m.userData.k = k; m.userData.z0 = F + 0.012; model.add(m); return m;
-      }
-      var bSel = mkPill("select", -0.2, -1.03), bSt = mkPill("start", 0.12, -1.03);
-      // speaker slots
-      var spk = new THREE.Group(); spk.position.set(0.5, -1.14, F + 0.001); spk.rotation.z = 0.42; model.add(spk);
-      for (var si = 0; si < 6; si++) { var sl = new THREE.Mesh(new THREE.ShapeGeometry(rr(0.034, 0.34, 0.017), 8), holeM); sl.position.x = (si - 2.5) * 0.07; spk.add(sl); }
-      // power switch on the top edge, a volume wheel on the side, a port on the other
-      var pSlot = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.02, 0.09), holeM); pSlot.position.set(-0.5, BH / 2 + 0.002, 0.02); model.add(pSlot);
-      var pKnob = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.07, 0.07), gray); pKnob.position.set(-0.59, BH / 2 + 0.025, 0.02); pKnob.userData.k = "power"; model.add(pKnob);
-      var pLight = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.012, 0.03), new THREE.MeshBasicMaterial({ color: 0xf7a8a9 })); pLight.position.set(-0.4, BH / 2 + 0.012, 0.02); model.add(pLight); pLight.visible = false;
-      var wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.13, 0.05, 40), gray); wheel.rotation.z = Math.PI / 2; wheel.position.set(BW / 2 - 0.06, 0.55, 0.0); model.add(wheel);
-      var port = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.12, 0.1), holeM); port.position.set(-BW / 2 - 0.001, 0.2, 0); model.add(port);
-      // back: a battery door and a sticker
-      var door = new THREE.Mesh(new THREE.ShapeGeometry(rr(1.2, 0.9, 0.06), 12), new THREE.MeshStandardMaterial({ color: 0x141417, roughness: 0.7 })); door.position.set(0, -0.6, -F - 0.001); door.rotation.y = Math.PI; model.add(door);
-      var stick = canvasTex(512, 256, function (g, w, h) { g.fillStyle = "#f7a8a9"; g.fillRect(0, 0, w, h); g.fillStyle = "#111"; g.font = "600 56px " + SANS; g.fillText("gn pocket", 32, 90); g.font = "500 22px " + MONO; g.fillText("MODEL GN-01 · MADE WITH THREE.JS", 32, 150); g.fillText("CODE BY GUILHERME NÓBREGA", 32, 190); });
-      var sticker = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 0.55), new THREE.MeshStandardMaterial({ map: stick, roughness: 0.6 })); sticker.rotation.y = Math.PI; sticker.position.set(0, 0.6, -F - 0.002); model.add(sticker);
-
-      // soft shadow under it
-      var shTex = canvasTex(256, 256, function (g) { var r0 = g.createRadialGradient(128, 128, 6, 128, 128, 128); r0.addColorStop(0, "rgba(0,0,0,.6)"); r0.addColorStop(1, "rgba(0,0,0,0)"); g.fillStyle = r0; g.fillRect(0, 0, 256, 256); });
-      var shadow = new THREE.Mesh(new THREE.PlaneGeometry(2.6, 1.1), new THREE.MeshBasicMaterial({ map: shTex, transparent: true, depthWrite: false })); shadow.rotation.x = -Math.PI / 2; shadow.position.y = -BH / 2 - 0.45; scene.add(shadow);
-
-      // ---- the screen texture follows the game; when off, the glass is dark with a blinking hint
-      onLcd = function () { lcdTex.needsUpdate = true; };
-      function drawOff(t) {
-        C.fillStyle = "#1a1214"; C.fillRect(0, 0, W, H);
-        if ((t * 1.6 | 0) % 2 === 0) { C.font = "8px " + FONT; C.textAlign = "center"; C.textBaseline = "middle"; C.fillStyle = "#f7a8a9"; C.fillText("PRESS POWER", 80, 72); }
-        lcdTex.needsUpdate = true;
-      }
-
-      // ---- input: click the real buttons
-      var ray = new THREE.Raycaster(), ptr = new THREE.Vector2(), HIT = [dpad, bA, bB, bSel, bSt, pKnob, lcdMesh];
-      var held = {}, tilt = { x: 0, y: 0 }, drag = null, dragY = 0, dragX = 0, hover = null;
-      function pick(e) {
-        var r = gl3.getBoundingClientRect(); ptr.set((e.clientX - r.left) / r.width * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
-        ray.setFromCamera(ptr, camera); var h = ray.intersectObjects(HIT, false)[0]; return h || null;
-      }
-      function dirOf(h) { var p = dpadG.worldToLocal(h.point.clone()); return Math.abs(p.x) > Math.abs(p.y) ? (p.x > 0 ? "right" : "left") : (p.y > 0 ? "up" : "down"); }
-      hit3d = function (k, dur) { held[k] = Math.max(held[k] || 0, dur); };
-      var downK = null;
-      gl3.addEventListener("pointerdown", function (e) {
-        engaged = true; setStatus();
-        var h = pick(e);
-        if (!h) { if (e.pointerType === "mouse") { drag = { x: e.clientX, y: e.clientY, ry: dragY, rx: dragX }; gl3.setPointerCapture(e.pointerId); gl3.style.cursor = "grabbing"; } return; }
-        e.preventDefault();
-        var k = h.object.userData.k;
-        if (k === "power") { held.power = 0.2; power(!on); return; }
-        if (k === "screen") { if (!on) power(true); return; }
-        if (k === "dpad") k = dirOf(h);
-        downK = k; held[k] = 9; press(k); if (navigator.vibrate && touch) navigator.vibrate(8);
-      });
-      function up() { if (downK) { held[downK] = 0.06; downK = null; } if (drag) { drag = null; gl3.style.cursor = ""; } }
-      gl3.addEventListener("pointerup", up); gl3.addEventListener("pointercancel", up); gl3.addEventListener("pointerleave", function () { if (!drag) up(); hover = null; tmx = tmy = 0; });
-      var tmx = 0, tmy = 0, mx = 0, my = 0;
-      gl3.addEventListener("pointermove", function (e) {
-        var r = gl3.getBoundingClientRect(); tmx = (e.clientX - r.left) / r.width - 0.5; tmy = (e.clientY - r.top) / r.height - 0.5;
-        if (drag) { dragY = drag.ry + (e.clientX - drag.x) * 0.012; dragX = drag.rx + (e.clientY - drag.y) * 0.006; return; }
-        if (e.pointerType === "mouse") { var h = pick(e); gl3.style.cursor = h ? "pointer" : "grab"; }
-      });
-
-      // ---- layout and frame loop
-      var CW = 0, CH = 0;
-      function size() {
-        CW = gl3.clientWidth; CH = gl3.clientHeight; if (!CW || !CH) return;
-        renderer.setPixelRatio(Math.min(2, devicePixelRatio || 1)); renderer.setSize(CW, CH, false);
-        camera.aspect = CW / CH; var tn = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
-        camera.position.set(0, 0, Math.max(3.55 / (2 * tn), 2.3 / (2 * tn * camera.aspect))); camera.lookAt(0, -0.05, 0); camera.updateProjectionMatrix();
-      }
-      stage.classList.add("is3d"); is3d = true; size(); onRealResize(size);
-      var vis3 = false, raf3 = 0, l3 = 0, T3 = 0, intro = 0;
-      new IntersectionObserver(function (en) { vis3 = en[0].isIntersecting; if (vis3 && !raf3) { l3 = 0; raf3 = requestAnimationFrame(loop3); } }, { rootMargin: "60px 0px" }).observe(gl3);
-      function damp(a, b, k, dt) { return a + (b - a) * (1 - Math.exp(-k * dt)); }
-      function loop3(ts) {
-        raf3 = 0; if (!vis3) return;
-        var dt = l3 ? Math.min(0.05, (ts - l3) / 1000) : 0.016; l3 = ts; T3 += dt;
-        if (!CW) size();
-        // it flips in as you scroll to it, then floats and leans toward the cursor
-        var r = sec.getBoundingClientRect(), pIn = Math.max(0, Math.min(1, (innerHeight - r.top) / (innerHeight * 0.9)));
-        intro = damp(intro, pIn, 6, dt); var ei = 1 - Math.pow(1 - intro, 3);
-        mx = damp(mx, tmx, 5, dt); my = damp(my, tmy, 5, dt);
-        if (!drag) { dragY = damp(dragY, 0, 3, dt); dragX = damp(dragX, 0, 3, dt); }
-        var sway = still ? 0 : 1;
-        model.rotation.y = (1 - ei) * -2.4 + mx * 0.5 + Math.sin(T3 * 0.6) * 0.06 * sway + dragY;
-        model.rotation.x = (1 - ei) * 0.5 + my * 0.32 - 0.08 + dragX;
-        model.rotation.z = (1 - ei) * 0.25 + Math.sin(T3 * 0.45) * 0.02 * sway;
-        root3.position.y = (1 - ei) * -0.6 + Math.sin(T3 * 0.9) * 0.035 * sway;
-        shadow.material.opacity = 0.9 * ei - Math.sin(T3 * 0.9) * 0.1 * sway; shadow.position.x = model.rotation.y * -0.2;
-        // buttons
-        Object.keys(held).forEach(function (k) { if (held[k] > 0 && held[k] < 9) held[k] -= dt; });
-        function amt(k) { return held[k] > 0 ? 1 : 0; }
-        [[bA, "a"], [bB, "b"], [bSel, "select"], [bSt, "start"]].forEach(function (q) { var m = q[0], tgt = m.userData.z0 - (amt(q[1]) ? (q[1].length === 1 ? 0.035 : 0.012) : 0); m.position.z = damp(m.position.z, tgt, 30, dt); });
-        tilt.x = damp(tilt.x, (amt("down") - amt("up")) * 0.16, 28, dt); tilt.y = damp(tilt.y, (amt("right") - amt("left")) * 0.16, 28, dt);
-        dpad.rotation.x = tilt.x; dpad.rotation.y = tilt.y;
-        pKnob.position.x = damp(pKnob.position.x, on ? -0.41 : -0.59, 14, dt); pLight.visible = false;
-        ledM.emissiveIntensity = damp(ledM.emissiveIntensity, on ? 2.4 : 0, 8, dt); ledGlow.intensity = ledM.emissiveIntensity * 0.12;
-        screenGlow.intensity = damp(screenGlow.intensity, on ? 0.6 : 0, 4, dt);
-        wheel.rotation.x += dt * 0.0;
-        if (!on) drawOff(T3);
-        renderer.render(scene, camera);
-        raf3 = requestAnimationFrame(loop3);
-      }
-      if (vis3 && !raf3) raf3 = requestAnimationFrame(loop3);
+      function setOp(o, a) { o.traverse(function (m) { if (m.material) { m.material.opacity = m.userData.op * a; m.visible = a > 0.002; } }); }
+      function size3() { var w = gl.clientWidth, h = gl.clientHeight; if (!w || !h) return; renderer.setPixelRatio(Math.min(2, devicePixelRatio || 1)); renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); }
+      size3();
+      var mx = 0, my = 0, tmx = 0, tmy = 0;
+      addEventListener("pointermove", function (e) { if (!on) return; tmx = e.clientX / innerWidth - 0.5; tmy = e.clientY / innerHeight - 0.5; }, { passive: true });
+      three = {
+        size: size3,
+        draw: function (p, dt, speed) {
+          mx += (tmx - mx) * 0.05; my += (tmy - my) * 0.05;
+          camera.position.x = mx * 0.6; camera.position.y = -my * 0.4; camera.lookAt(0, 0, 0);
+          var sc = Math.min(1, camera.aspect / 0.9);
+          objs.forEach(function (o, i) {
+            var u = (p - (AT0 + i * STEP)) / STEP, side = i % 2 ? 1 : -1, w2 = o.userData.wrap;
+            // far away and off to one side, then front and centre, then it flies past your shoulder
+            var z = u < 0 ? 1.3 + u * 34 : 1.3 + u * 8, x = u < 0 ? side * -u * 2.2 : side * -u * 3.2, y = u < 0 ? (i % 3 - 1) * -u * 1.2 : u * 0.8;
+            w2.position.set(x, y, z);
+            var a = u < -1.6 ? 0 : u < -0.6 ? sm((u + 1.6) / 1) : u < 0.42 ? 1 : 1 - sm((u - 0.42) / 0.2);
+            setOp(o, a); w2.visible = a > 0.002;
+            if (!w2.visible) return;
+            w2.scale.setScalar(sc);
+            o.rotation.y = (i === 2 || i === 4 ? T * 0.6 : Math.sin(T * 0.8 + i) * 0.55) + u * 1.1 + mx * 0.6; o.rotation.x = Math.sin(T * 0.7 + i) * 0.15 - my * 0.3 + u * 0.4;
+            if (o.userData.glow) o.userData.glow.material.opacity = a * (0.55 + Math.sin(T * 3 + i) * 0.1);
+            if (o.userData.packets) o.userData.packets.forEach(function (pk) { var f = (T * 0.6 + pk.userData.ph) % 1; if (!pk.userData.out) f = 1 - f; pk.position.copy(pk.userData.to).multiplyScalar(f); });
+            if (o.userData.flames) o.userData.flames.forEach(function (fl, k) { var s2 = 1 + Math.sin(T * 40 + k * 2) * 0.08 + speed * 4; fl.scale.set(1, Math.min(3, s2), 1); });
+          });
+          renderer.render(scene, camera);
+        }
+      };
     }
 
+    function frame(t) {
+      raf = 0; if (!on) return;
+      var dt = lastT ? Math.min(3, (t - lastT) / 16.67) : 1; lastT = t; T += dt / 60;
+      var y = scrollY, dy = (y - lastY) / Math.max(1, innerHeight); lastY = y;
+      vel += (dy / dt - vel) * 0.18;
+      var r = sec.getBoundingClientRect(), span = Math.max(1, sec.offsetHeight - innerHeight), p = cl(-r.top / span);
+      // ---- the portal: opens as the section rises into view, closes at the very end
+      // at the end there is no cut: the words drift up exactly as fast as the page scrolls and the space fades,
+      // so when the section lets go you are already just scrolling on
+      var open = sm(1 - r.top / (innerHeight * 0.9)), close = 0, R = Math.hypot(W, H) / 2 + 20;
+      // the next section is pulled up under this one (margin-bottom: -60vh), so it starts rising into view at PE
+      var PE = 1 - 0.6 * innerHeight / span, pre = sm((p - 0.8) / Math.max(0.01, PE - 0.8));
+      var k = sm((p - PE) / (1 - PE)), lift = Math.max(0, p - PE) * span + pre * innerHeight * 0.12;
+      var rad = R * open;
+      sticky.style.setProperty("--k", k.toFixed(3)); sticky.style.setProperty("--bga", (1 - k).toFixed(3));
+      sticky.style.setProperty("--r", rad.toFixed(1) + "px");
+      sticky.style.setProperty("--ro", (rad > 4 ? Math.min(1, (1 - rad / R) * 4) : 0).toFixed(3));
+      // ---- caption for the stage in front of you
+      var idx = Math.max(0, Math.min(4, Math.round((p - AT0) / STEP))), du = Math.abs((p - (AT0 + idx * STEP)) / STEP);
+      if (idx !== capIdx) { capIdx = idx; capN.textContent = String(idx + 1).padStart(2, "0") + " / 05"; capT.textContent = STAGES[idx][0]; capD.textContent = STAGES[idx][1]; }
+      var ca = p > AT0 + 4.5 * STEP ? 0 : cl(1 - (du - 0.18) / 0.22) * (p > AT0 - STEP * 0.6 ? 1 : 0);
+      cap.style.opacity = ca.toFixed(3); cap.style.transform = "translateY(" + ((1 - ca) * 10).toFixed(1) + "px)";
+      // ---- the arrival
+      var e = sm((p - 0.72) / 0.08), isEnd = p > 0.72;
+      if (isEnd && !wasEnd) flash = 1; wasEnd = isEnd;
+      end.style.opacity = e.toFixed(3); end.style.transform = "translateY(" + (-lift).toFixed(1) + "px) scale(" + (0.9 + 0.1 * e).toFixed(4) + ")";
+      hud.style.opacity = (1 - k).toFixed(3);
+      hint.textContent = p < 0.03 ? "scroll to accelerate" : isEnd ? (k > 0 ? "// dropping out of warp" : "// arrived") : "stage " + String(idx + 1).padStart(2, "0") + " / 05 · " + STAGES[idx][0].toLowerCase();
+      // ---- stars: a slow cruise plus the speed your scroll gives them; they streak on the way in too
+      var cruise = (isEnd ? 0.0012 : 0.0035 + (1 - open) * 0.02) * (1 - k), sp = cruise + vel * 0.9 * (1 - k), c = Math.min(9.99, Math.abs(vel) * 40);
+      vEl.textContent = c.toFixed(2); bar.style.setProperty("--v", Math.min(1, c / 6).toFixed(3));
+      g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, W, H);
+      var cx = W / 2, cy = H / 2, f = Math.max(W, H) * 0.42, stretch = 1 + Math.min(40, Math.abs(vel) * 260 + (1 - open) * 12) * (1 - k);
+      g.translate(0, -lift * 0.55);
+      g.lineCap = "round";
+      for (var i = 0; i < N; i++) {
+        var s = S[i];
+        s.pz = s.z; s.z -= sp * dt;
+        if (s.z <= 0.015) { spawn(s, true); continue; }
+        if (s.z > 1) { spawn(s, false); s.z = rnd(0.02, 0.2); s.pz = s.z; continue; }
+        var px = cx + s.x / s.z * f, py = cy + s.y / s.z * f;
+        if (px < -50 || px > W + 50 || py < -50 || py > H + 50) { spawn(s, true); continue; }
+        var tz = Math.min(1.2, s.z + (s.pz - s.z) * stretch + 0.004), qx = cx + s.x / tz * f, qy = cy + s.y / tz * f;
+        g.strokeStyle = s.pk ? "#f7a8a9" : "#ffffff"; g.globalAlpha = Math.min(1, (1 - s.z) * 1.3) * (s.pk ? 0.95 : 0.75) * (1 - k); g.lineWidth = Math.max(0.6, (1 - s.z) * 2.6);
+        g.beginPath(); g.moveTo(qx, qy); g.lineTo(px, py); g.stroke();
+      }
+      var rg = g.createRadialGradient(cx, cy, 0, cx, cy, Math.max(W, H) * (0.35 + flash * 0.4));
+      rg.addColorStop(0, "#f7a8a9"); rg.addColorStop(1, "rgba(0,0,0,0)");
+      g.globalAlpha = (0.1 + Math.min(0.3, Math.abs(vel) * 3) + flash * 0.5) * (1 - k); g.fillStyle = rg; g.fillRect(0, 0, W, H); g.globalAlpha = 1;
+      flash *= Math.pow(0.93, dt);
+      if (three) three.draw(p, dt, Math.abs(vel));
+      raf = requestAnimationFrame(frame);
+    }
+    if ("IntersectionObserver" in window) new IntersectionObserver(function (en) { on = en[0].isIntersecting; lastY = scrollY; lastT = 0; if (on && !raf) raf = requestAnimationFrame(frame); }, { rootMargin: "40px 0px" }).observe(sec);
+    else { on = true; raf = requestAnimationFrame(frame); }
   })();
 
   /* ---------- Elsewhere: three big doors; the hovered one shows a preview that floats with the cursor ---------- */
@@ -2202,6 +1960,10 @@ export function startEngine(): void {
 
       function frame(ts) {
         var r = sec.getBoundingClientRect(), span = Math.max(1, sec.offsetHeight - innerHeight), p = reduce ? 0.78 : cl(-r.top / span), t = ts / 1000;
+        // Contact is pulled up under this section (margin-bottom: -60vh) and starts rising into view at PE.
+        // The story runs until then; after it the phone lifts away with the page, so there is no empty stretch.
+        var PE = 1 - 0.6 * innerHeight / span, raw = p, lift = 0;
+        if (!reduce) { p = raw < PE ? 0.03 + raw / PE * 0.85 : 0.88 + (raw - PE) / (1 - PE) * 0.12; lift = Math.max(0, raw - PE) * span; }
         mx += (tmx - mx) * 0.06; my += (tmy - my) * 0.06;
         // phases: spin in 0-0.12 · tip back 0.1-0.22 · layers drop 0.16-0.42 · hold · snap flat 0.56-0.7 · turn once 0.8-0.96
         var enter = ease(p / 0.12), tilt = ease((p - 0.1) / 0.12) * (1 - ease((p - 0.56) / 0.14)), ex = 1 - ease((p - 0.56) / 0.14);
@@ -2219,17 +1981,17 @@ export function startEngine(): void {
         var sway = reduce ? 0 : Math.sin(t * 0.7) * 0.03;
         body.rotation.set(
           lerp(0.18, -0.78, tilt) + my * 0.25,
-          (1 - enter) * Math.PI * 1.1 + lerp(-0.28, 0.12, tilt) + mx * 0.5 + sway + spin * Math.PI * 2,
+          (1 - enter) * Math.PI * 0.55 + lerp(-0.28, 0.12, tilt) + mx * 0.5 + sway + spin * Math.PI * 2,
           lerp(0.05, 0.42, tilt));
-        // it leaves the way it came: drifting back into the dark, tipping away and fading out
-        body.position.set(0, (1 - enter) * -0.5 + Math.sin(t * 1.1) * 0.015 + leave * 0.35, (1 - enter) * -1.2 - leave * 2.6);
-        body.rotation.x += leave * -0.35;
-        var fadeOut = 1 - leave;
-        cv.style.opacity = fadeOut.toFixed(3);
-        sec.querySelector(".mb-foot").style.opacity = fadeOut.toFixed(3);
+        // on the way out it rides up with the page as Contact slides in underneath, tipping back and dimming a little
+        body.position.set(0, (1 - enter) * -0.5 + Math.sin(t * 1.1) * 0.015, (1 - enter) * -1.2 - leave * 0.8);
+        body.rotation.x += leave * -0.45;
+        var fadeOut = 1 - leave * 0.4, liftT = "translate3d(0," + (-lift).toFixed(1) + "px,0)";
+        cv.style.opacity = fadeOut.toFixed(3); cv.style.transform = liftT;
+        var footEl = sec.querySelector(".mb-foot"); footEl.style.opacity = (1 - leave).toFixed(3); footEl.style.transform = liftT;
         var vis = cl(p / 0.05) * 0.999 + 0.001;
         frameM.opacity = 1;
-        screenM.opacity = cl((p - 0.08) / 0.04);
+        screenM.opacity = cl((p - 0.05) / 0.04);
         shadow.material.opacity = 0.7 * enter * (1 - leave);
         // the app's state
         var line = ease((p - 0.3) / 0.14), bars = ease((p - 0.33) / 0.14), live = p > 0.44 ? 1 : 0;

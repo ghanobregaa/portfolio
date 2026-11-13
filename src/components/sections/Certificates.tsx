@@ -1,4 +1,3 @@
-import certNextumaImg from "@/assets/cert-nextuma.jpg";
 import certSantanderImg from "@/assets/cert-santander.jpg";
 import certLinkedinImg from "@/assets/cert-linkedin.jpg";
 import certCiberImg from "@/assets/cert-ciber.jpg";
@@ -6,7 +5,6 @@ import certCiberImg from "@/assets/cert-ciber.jpg";
 // order = the order they hang along the corridor; the 3D gallery reads these buttons
 const CERTS = [
   { k: "r2", img: certSantanderImg, title: "Project Management & Agile Fundamentals", issuer: "Santander Open Academy", date: "Aug 2024" },
-  { k: "r1", img: certNextumaImg, title: "Voices of Marketing Workshop", issuer: "NextUMa", date: "Nov 2025" },
   { k: "r4", img: certCiberImg, title: "Technical Principles of Cybersecurity", issuer: "UTAD · C-Academy", date: "Jan 2026" },
   { k: "r3", img: certLinkedinImg, title: "Managing and Leading Developers", issuer: "LinkedIn Learning", date: "Sep 2026" },
 ];
@@ -27,7 +25,7 @@ export function Certificates() {
               </li>
             ))}
           </ul>
-          <div className="container gl-foot" aria-hidden="true"><span className="gl-cap" id="gl-cap">// scroll to walk in</span><span className="gl-count" id="gl-count">00 / 04</span></div>
+          <div className="container gl-foot" aria-hidden="true"><span className="gl-cap" id="gl-cap">// scroll to walk in</span><span className="gl-count" id="gl-count">00 / 03</span></div>
           <div className="gl-box" id="gl-box" hidden>
             <img id="gl-img" alt="" />
             <button className="gl-close" id="gl-close" type="button" tabIndex={-1} aria-label="Close certificate">×</button>

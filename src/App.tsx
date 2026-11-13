@@ -5,10 +5,10 @@ import { Nav } from "@/components/layout/Nav";
 import { Hero } from "@/components/sections/Hero";
 import { Morph } from "@/components/sections/Morph";
 import { About } from "@/components/sections/About";
+import { Warp } from "@/components/sections/Warp";
 import { Experience } from "@/components/sections/Experience";
 import { Certificates } from "@/components/sections/Certificates";
 import { Work } from "@/components/sections/Work";
-import { Play } from "@/components/sections/Play";
 import { Stack } from "@/components/sections/Stack";
 import { MobileApp } from "@/components/sections/MobileApp";
 import { Contact } from "@/components/sections/Contact";
@@ -31,12 +31,12 @@ export default function App() {
         <Hero />
         <Morph />
         <About />
+        <Warp />
         <Experience />
         <Work />
         <Certificates />
         <Stack />
         <MobileApp />
-        <Play />
         <Contact />
       </main>
       <Footer />
