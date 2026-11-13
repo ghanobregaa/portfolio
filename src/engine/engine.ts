@@ -1279,7 +1279,7 @@ export function startEngine(): void {
     var hud = sec.querySelector(".wp-hud"), hint = document.getElementById("wp-hint"), vEl = document.getElementById("wp-v"), bar = document.getElementById("wp-bar");
     var cap = document.getElementById("wp-cap"), capN = document.getElementById("wp-cap-n"), capT = document.getElementById("wp-cap-t"), capD = document.getElementById("wp-cap-d");
     var STAGES = [["Idea", 'a sketch, a problem, a "what if"'], ["Design", "pixels, flows and how it feels"], ["API", "flask · rest · mysql"], ["App", "flutter · react · tailwind"], ["Production", "shipped, monitored, automated"]];
-    var AT0 = 0.12, STEP = 0.12, OPEN = 0.07;
+    var AT0 = 0.12, STEP = 0.12, OPEN = 0.07, lastMask = "";
     var W = 0, H = 0, dpr = 1, on = false, raf = 0, lastY = scrollY, vel = 0, lastT = 0, flash = 0, wasEnd = false, capIdx = -1, T = 0;
     var small = matchMedia("(max-width: 700px)").matches, N = small ? 520 : 1000, S = [];
     function rnd(a, b) { return a + Math.random() * (b - a); }
@@ -1440,7 +1440,7 @@ export function startEngine(): void {
     fxSize(); onRealResize(fxSize);
     function shootingStar(ent, time, open, rad) {
       if (!fg2) return;
-      var active = ent > 0.32 && open < 0.995;
+      var active = ent > 0.28 && open < 0.995;
       if (!active) { if (fxOn) { fg2.setTransform(1, 0, 0, 1, 0, 0); fg2.clearRect(0, 0, fx.width, fx.height); fx.style.visibility = "hidden"; fxOn = false; } return; }
       if (!fxOn) { fx.style.visibility = "visible"; fxOn = true; }
       // phones change the viewport height as the address bar moves: keep the overlay matched to it every frame
@@ -1448,8 +1448,10 @@ export function startEngine(): void {
       if (fx.width !== Math.round(w * dpr) || fx.height !== Math.round(h * dpr)) { fx.width = Math.round(w * dpr); fx.height = Math.round(h * dpr); }
       fg2.setTransform(dpr, 0, 0, dpr, 0, 0); fg2.clearRect(0, 0, w, h);
       // the streak: from the top left, on a gentle arc, into the centre
-      var tr = sm((ent - 0.36) / 0.42), sx = w < h ? w * 0.08 : w * 0.04, sy = w < h ? h * 0.2 : h * 0.08;
-      function at(k) { var x = sx + (cx - sx) * k, y = sy + (cy - sy) * k - Math.sin(k * Math.PI) * Math.min(w, h) * 0.08; return [x, y]; }
+      // it comes in from beyond the top-left corner, steeper on a tall phone screen, and eases to a stop in the centre
+      var tr = 1 - Math.pow(1 - cl((ent - 0.3) / 0.48), 2.2), ang = w < h ? 0.95 : 0.55, dist = Math.hypot(w, h) * 0.78;
+      var sx = cx - Math.cos(ang) * dist, sy = cy - Math.sin(ang) * dist, nx = -Math.sin(ang), ny = Math.cos(ang);
+      function at(k) { var bend = Math.sin(k * Math.PI) * Math.min(w, h) * 0.07; return [sx + (cx - sx) * k + nx * bend, sy + (cy - sy) * k + ny * bend]; }
       if (tr > 0 && tr < 1) {
         var head = at(tr), steps = 26;
         for (var i = 0; i < steps; i++) {
@@ -1511,7 +1513,14 @@ export function startEngine(): void {
       shootingStar(ent, T, open, rad);
       clip.style.transform = "scale(" + (1 + (1 - open) * 0.18).toFixed(4) + ")";
       sticky.style.setProperty("--k", k.toFixed(3)); sticky.style.setProperty("--bga", (1 - k).toFixed(3));
-      sticky.style.setProperty("--r", rad.toFixed(1) + "px");
+      // the mask is written straight onto the element (some mobile browsers do not repaint a mask that only reads a CSS variable),
+      // and the space stays fully hidden until the opening really starts
+      if (open <= 0.001) { if (clip.style.visibility !== "hidden") clip.style.visibility = "hidden"; }
+      else {
+        if (clip.style.visibility !== "visible") clip.style.visibility = "visible";
+        var mk = open >= 0.999 ? "none" : "radial-gradient(circle at 50% 50%, #000 " + Math.max(0, rad - 80).toFixed(1) + "px, transparent " + rad.toFixed(1) + "px)";
+        if (mk !== lastMask) { lastMask = mk; clip.style.webkitMaskImage = mk; clip.style.maskImage = mk; }
+      }
       // ---- caption for the stage in front of you
       var idx = Math.max(0, Math.min(4, Math.round((p - AT0) / STEP))), du = Math.abs((p - (AT0 + idx * STEP)) / STEP);
       if (idx !== capIdx) { capIdx = idx; capN.textContent = String(idx + 1).padStart(2, "0") + " / 05"; capT.textContent = STAGES[idx][0]; capD.textContent = STAGES[idx][1]; }
