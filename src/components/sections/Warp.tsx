@@ -17,7 +17,7 @@ export function Warp() {
             <span className="wp-speed"><i id="wp-bar"></i><b id="wp-v">0.00</b> c</span>
           </div>
         </div>
-        <div className="wp-ring" id="wp-ring" aria-hidden="true"></div>
+        <canvas className="wp-fx" id="wp-fx" aria-hidden="true"></canvas>
         <ol className="sr-only"><li>Idea</li><li>Design</li><li>API</li><li>App</li><li>Production</li></ol>
       </div>
     </section>

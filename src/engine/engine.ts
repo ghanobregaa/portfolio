@@ -1077,15 +1077,6 @@ export function startEngine(): void {
     });
     cv.addEventListener("pointerleave", function () { mx = my = -9999; });
     var ripples = [], gForm = 0, lastRip = 0;
-    cv.addEventListener("pointerdown", function (e) {
-      var r = cv.getBoundingClientRect(), px = e.clientX - r.left, py = e.clientY - r.top;
-      // on the sea, a click drops a stone: a big ring runs across the surface
-      if (gForm < 1 && !reduce) { ripples.push({ sx: px, sy: py, t0: performance.now(), a: 1 }); return; }
-      P.forEach(function (p) {
-        var dx = p.x - px, dy = p.y - py, d = Math.hypot(dx, dy) || 1, f = Math.max(0, 1 - d / 420) * 38;
-        p.vx += dx / d * f + (Math.random() - 0.5) * 6; p.vy += dy / d * f + (Math.random() - 0.5) * 6;
-      });
-    });
     if ("IntersectionObserver" in window) new IntersectionObserver(function (e) {
       var was = on; on = e[0].isIntersecting;
       if (on && !was && performance.now() - switchAt > 1200) switchAt = performance.now();
@@ -1109,7 +1100,7 @@ export function startEngine(): void {
     var target = -1, prevStage = 0, switchAt = -1e9, PRE = 0.14;
     addEventListener("scroll", readScroll, { passive: true }); readScroll();
     // the intro: a calm sea of dots seen in perspective. It breathes on its own,
-    // a soft swell follows the cursor, moving leaves a wake, a click sends a ring across it
+    // a soft swell follows the cursor and moving leaves a wake
     var GX = Math.round(Math.sqrt(N * 3.1)), GY = Math.ceil(N / GX);
     P.forEach(function (p, i) {
       var row = Math.floor(i / GX);
@@ -1167,7 +1158,7 @@ export function startEngine(): void {
         cx.fillStyle = col.fg;
         var form = reduce ? 1 : Math.min(1, progress / PRE); gForm = form;
         var gal = form < 1, nowT = performance.now();
-        if (hint2 && hintSea !== gal) { hintSea = gal; hint2.textContent = gal ? "move to make waves · click to splash" : "move to scatter · click to explode"; }
+        if (hint2 && hintSea !== gal) { hintSea = gal; hint2.textContent = gal ? "move to make waves" : "move to scatter"; }
         if (gal) {
           // rings in sea coordinates, oldest dropped once they have faded
           rp.length = 0;
@@ -1195,13 +1186,16 @@ export function startEngine(): void {
           }
           if (!reduce) { var wob = fi < 1 ? 1.4 * fi : 1.4; tx += Math.sin(time * 1.3 + p.ph) * wob; ty += Math.cos(time * 1.1 + p.ph) * wob; }
           var dx = p.x - mx, dy = p.y - my, d2 = dx * dx + dy * dy;
-          if (fi > 0.5 && d2 < 9000) { var d = Math.sqrt(d2) || 1, push = (1 - d / 95) * 3.2; p.vx += dx / d * push; p.vy += dy / d * push; }
+          if (fi > 0.5 && d2 < 9000) { var d = Math.sqrt(d2) || 1, push = (1 - d / 95) * 1.6; p.vx += dx / d * push; p.vy += dy / d * push; }
           if (reduce) { p.x = tx; p.y = ty; }
           else {
-            p.vx += (tx - p.x) * 0.13; p.vy += (ty - p.y) * 0.13;
-            p.vx *= 0.72; p.vy *= 0.72; p.x += p.vx; p.y += p.vy;
+            // glide to the target without a spring, so nothing overshoots or bounces; the cursor's nudge just fades out
+            var px0 = p.x, py0 = p.y;
+            p.vx *= 0.82; p.vy *= 0.82;
+            p.x += (tx - p.x) * 0.14 + p.vx; p.y += (ty - p.y) * 0.14 + p.vy;
+            p.sp = Math.hypot(p.x - px0, p.y - py0);
           }
-          var snap = fi > 0.6, gx2 = snap ? Math.round(p.x / 3) * 3 : p.x, gy2 = snap ? Math.round(p.y / 3) * 3 : p.y, sp = Math.min(1, Math.hypot(p.vx, p.vy) / 6);
+          var snap = fi > 0.6, gx2 = snap ? Math.round(p.x / 3) * 3 : p.x, gy2 = snap ? Math.round(p.y / 3) * 3 : p.y, sp = Math.min(1, (p.sp || 0) / 6);
           if (depth <= 0.01) continue;
           var al = Math.min(1, (0.8 + 0.2 * (1 - sp)) * vis * depth), rad2 = (1.05 + sp * 0.45) * (0.55 + 0.45 * Math.min(1.3, depth));
           if (p.hot && fi < 0.5) { hots.push(gx2, gy2, al, rad2); continue; }
@@ -1241,11 +1235,11 @@ export function startEngine(): void {
     var sec = document.getElementById("warp"), cv = document.getElementById("wp-cv"), gl = document.getElementById("wp-gl");
     if (!sec || !cv) return;
     if (matchMedia("(prefers-reduced-motion: reduce)").matches) { var e0 = document.getElementById("wp-end"); if (e0) e0.style.opacity = 1; return; }
-    var g = cv.getContext("2d"), end = document.getElementById("wp-end"), sticky = document.getElementById("wp-sticky");
+    var g = cv.getContext("2d"), end = document.getElementById("wp-end"), sticky = document.getElementById("wp-sticky"), clip = document.getElementById("wp-clip");
     var hud = sec.querySelector(".wp-hud"), hint = document.getElementById("wp-hint"), vEl = document.getElementById("wp-v"), bar = document.getElementById("wp-bar");
     var cap = document.getElementById("wp-cap"), capN = document.getElementById("wp-cap-n"), capT = document.getElementById("wp-cap-t"), capD = document.getElementById("wp-cap-d");
     var STAGES = [["Idea", 'a sketch, a problem, a "what if"'], ["Design", "pixels, flows and how it feels"], ["API", "flask · rest · mysql"], ["App", "flutter · react · tailwind"], ["Production", "shipped, monitored, automated"]];
-    var AT0 = 0.08, STEP = 0.13;
+    var AT0 = 0.12, STEP = 0.12, OPEN = 0.07;
     var W = 0, H = 0, dpr = 1, on = false, raf = 0, lastY = scrollY, vel = 0, lastT = 0, flash = 0, wasEnd = false, capIdx = -1, T = 0;
     var small = matchMedia("(max-width: 700px)").matches, N = small ? 520 : 1000, S = [];
     function rnd(a, b) { return a + Math.random() * (b - a); }
@@ -1398,6 +1392,62 @@ export function startEngine(): void {
       };
     }
 
+    // ---- the shooting star lives on a fixed overlay so it can cross the end of the section above
+    var fx = document.getElementById("wp-fx"), fg2 = fx ? fx.getContext("2d") : null, fxOn = false;
+    function fxSize() { if (!fx) return; fx.width = Math.round(innerWidth * dpr); fx.height = Math.round(innerHeight * dpr); }
+    fxSize(); onRealResize(fxSize);
+    function shootingStar(ent, time, open, rad) {
+      if (!fg2) return;
+      var active = ent > 0.32 && open < 0.995;
+      if (!active) { if (fxOn) { fg2.setTransform(1, 0, 0, 1, 0, 0); fg2.clearRect(0, 0, fx.width, fx.height); fx.style.visibility = "hidden"; fxOn = false; } return; }
+      if (!fxOn) { fx.style.visibility = "visible"; fxOn = true; }
+      var w = innerWidth, h = innerHeight, cx = w / 2, cy = h / 2;
+      fg2.setTransform(dpr, 0, 0, dpr, 0, 0); fg2.clearRect(0, 0, w, h);
+      // the streak: from the top left, on a gentle arc, into the centre
+      var tr = sm((ent - 0.36) / 0.42), sx = w * 0.04, sy = h * 0.08;
+      function at(k) { var x = sx + (cx - sx) * k, y = sy + (cy - sy) * k - Math.sin(k * Math.PI) * h * 0.06; return [x, y]; }
+      if (tr > 0 && tr < 1) {
+        var head = at(tr), steps = 26;
+        for (var i = 0; i < steps; i++) {
+          var k0 = Math.max(0, tr - (i + 1) * 0.012), k1 = Math.max(0, tr - i * 0.012), a = at(k0), b = at(k1), f = 1 - i / steps;
+          fg2.strokeStyle = i < 3 ? "rgba(255,255,255," + f + ")" : "rgba(247,168,169," + (f * 0.9).toFixed(3) + ")";
+          fg2.lineWidth = 3.2 * f + 0.4; fg2.lineCap = "round"; fg2.beginPath(); fg2.moveTo(a[0], a[1]); fg2.lineTo(b[0], b[1]); fg2.stroke();
+        }
+        var hg = fg2.createRadialGradient(head[0], head[1], 0, head[0], head[1], 26); hg.addColorStop(0, "rgba(255,255,255,.95)"); hg.addColorStop(0.3, "rgba(247,168,169,.5)"); hg.addColorStop(1, "rgba(247,168,169,0)");
+        fg2.fillStyle = hg; fg2.fillRect(head[0] - 26, head[1] - 26, 52, 52);
+      }
+      // the glint where it lands: a soft glow and a four point star that waits for you, then tears the space open
+      var gl0 = sm((ent - 0.74) / 0.08) * (1 - sm(open / 0.6));
+      // a bloom of light as it bursts
+      var fb = Math.sin(Math.min(1, open * 1.6) * Math.PI) * 0.55;
+      if (fb > 0.002) {
+        var br = Math.max(140, rad * 1.3 + 120), bg = fg2.createRadialGradient(cx, cy, 0, cx, cy, br);
+        bg.addColorStop(0, "rgba(255,255,255," + fb.toFixed(3) + ")"); bg.addColorStop(0.35, "rgba(247,168,169," + (fb * 0.45).toFixed(3) + ")"); bg.addColorStop(1, "rgba(247,168,169,0)");
+        fg2.fillStyle = bg; fg2.fillRect(0, 0, w, h);
+      }
+      // the rim of the opening: a soft band of light that runs outward and thins as it goes
+      if (open > 0.001 && rad > 4) {
+        var fade = 1 - open, band = 50 + 60 * open, r0 = Math.max(0, rad - band), r1 = rad + band * 0.5;
+        var rg2 = fg2.createRadialGradient(cx, cy, r0, cx, cy, r1);
+        rg2.addColorStop(0, "rgba(247,168,169,0)"); rg2.addColorStop(0.62, "rgba(247,168,169," + (0.55 * fade).toFixed(3) + ")"); rg2.addColorStop(0.7, "rgba(255,255,255," + (0.85 * fade).toFixed(3) + ")"); rg2.addColorStop(1, "rgba(255,255,255,0)");
+        fg2.fillStyle = rg2; fg2.beginPath(); fg2.arc(cx, cy, r1, 0, 6.2832); fg2.fill();
+      }
+      if (gl0 > 0.002) {
+        var sz = 30 + 120 * sm((ent - 0.74) / 0.08) + rad * 0.9, rot = (ent - 0.74) * 2.4 + time * 0.4 + open * 0.8;
+        var rg = fg2.createRadialGradient(cx, cy, 0, cx, cy, sz * 1.6); rg.addColorStop(0, "rgba(255,255,255," + (0.9 * gl0).toFixed(3) + ")"); rg.addColorStop(0.18, "rgba(247,168,169," + (0.55 * gl0).toFixed(3) + ")"); rg.addColorStop(1, "rgba(247,168,169,0)");
+        fg2.fillStyle = rg; fg2.fillRect(cx - sz * 1.6, cy - sz * 1.6, sz * 3.2, sz * 3.2);
+        fg2.save(); fg2.translate(cx, cy); fg2.rotate(rot); fg2.globalAlpha = gl0;
+        [[sz * 1.5, 3], [sz * 0.7, 2]].forEach(function (q, j) {
+          fg2.rotate(j ? Math.PI / 4 : 0);
+          for (var a2 = 0; a2 < 4; a2++) {
+            fg2.rotate(Math.PI / 2);
+            var lg = fg2.createLinearGradient(0, 0, q[0], 0); lg.addColorStop(0, "rgba(255,255,255,1)"); lg.addColorStop(1, "rgba(247,168,169,0)");
+            fg2.fillStyle = lg; fg2.beginPath(); fg2.moveTo(0, -q[1]); fg2.lineTo(q[0], 0); fg2.lineTo(0, q[1]); fg2.closePath(); fg2.fill();
+          }
+        });
+        fg2.restore(); fg2.globalAlpha = 1;
+      }
+    }
     function frame(t) {
       raf = 0; if (!on) return;
       var dt = lastT ? Math.min(3, (t - lastT) / 16.67) : 1; lastT = t; T += dt / 60;
@@ -1407,14 +1457,17 @@ export function startEngine(): void {
       // ---- the portal: opens as the section rises into view, closes at the very end
       // at the end there is no cut: the words drift up exactly as fast as the page scrolls and the space fades,
       // so when the section lets go you are already just scrolling on
-      var open = sm(1 - r.top / (innerHeight * 0.9)), close = 0, R = Math.hypot(W, H) / 2 + 20;
+      // arrival: a shooting star crosses the screen and lands in the middle with a glint, then the portal opens from that point
+      // the space only opens once the section has locked to the screen, so the opening is never cut by an edge
+      var ent = cl(1 - r.top / innerHeight), open = sm(p / OPEN), close = 0, R = Math.hypot(W, H) / 2 + 100;
       // the next section is pulled up under this one (margin-bottom: -60vh), so it starts rising into view at PE
       var PE = 1 - 0.6 * innerHeight / span, pre = sm((p - 0.8) / Math.max(0.01, PE - 0.8));
       var k = sm((p - PE) / (1 - PE)), lift = Math.max(0, p - PE) * span + pre * innerHeight * 0.12;
-      var rad = R * open;
+      var rad = R * Math.pow(open, 1.35);
+      shootingStar(ent, T, open, rad);
+      clip.style.transform = "scale(" + (1 + (1 - open) * 0.18).toFixed(4) + ")";
       sticky.style.setProperty("--k", k.toFixed(3)); sticky.style.setProperty("--bga", (1 - k).toFixed(3));
       sticky.style.setProperty("--r", rad.toFixed(1) + "px");
-      sticky.style.setProperty("--ro", (rad > 4 ? Math.min(1, (1 - rad / R) * 4) : 0).toFixed(3));
       // ---- caption for the stage in front of you
       var idx = Math.max(0, Math.min(4, Math.round((p - AT0) / STEP))), du = Math.abs((p - (AT0 + idx * STEP)) / STEP);
       if (idx !== capIdx) { capIdx = idx; capN.textContent = String(idx + 1).padStart(2, "0") + " / 05"; capT.textContent = STAGES[idx][0]; capD.textContent = STAGES[idx][1]; }
@@ -1451,7 +1504,7 @@ export function startEngine(): void {
       if (three) three.draw(p, dt, Math.abs(vel));
       raf = requestAnimationFrame(frame);
     }
-    if ("IntersectionObserver" in window) new IntersectionObserver(function (en) { on = en[0].isIntersecting; lastY = scrollY; lastT = 0; if (on && !raf) raf = requestAnimationFrame(frame); }, { rootMargin: "40px 0px" }).observe(sec);
+    if ("IntersectionObserver" in window) new IntersectionObserver(function (en) { on = en[0].isIntersecting; lastY = scrollY; lastT = 0; if (!on) shootingStar(0, 0, 1, 0); if (on && !raf) raf = requestAnimationFrame(frame); }, { rootMargin: "40px 0px" }).observe(sec);
     else { on = true; raf = requestAnimationFrame(frame); }
   })();
 

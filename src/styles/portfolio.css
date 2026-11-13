@@ -1235,9 +1235,10 @@ section.wp { position: relative; height: 620vh; margin-bottom: -60vh; }
 /* the next section slides in over the fading space, so there is no seam */
 section.wp + section { position: relative; z-index: 1; }
 .wp-sticky { position: sticky; top: 0; height: 100vh; height: 100svh; overflow: hidden; }
-/* a portal: it opens as you arrive and closes behind you */
-.wp-clip { position: absolute; inset: 0; background: rgb(0 0 0 / var(--bga, 1)); clip-path: circle(var(--r, 0px) at 50% var(--cy, 50%)); }
-.wp-ring { position: absolute; left: 50%; top: var(--cy, 50%); width: calc(var(--r, 0px) * 2); height: calc(var(--r, 0px) * 2); translate: -50% -50%; border-radius: 50%; pointer-events: none; box-shadow: 0 0 0 1.5px var(--accent), 0 0 40px 6px var(--glow), inset 0 0 60px 10px rgba(247, 168, 169, .25); opacity: var(--ro, 0); }
+/* the space opens from where the shooting star lands, with a soft edge */
+.wp-clip { position: absolute; inset: 0; background: rgb(0 0 0 / var(--bga, 1)); -webkit-mask-image: radial-gradient(circle at 50% 50%, #000 calc(var(--r, 0px) - 80px), transparent var(--r, 0px)); mask-image: radial-gradient(circle at 50% 50%, #000 calc(var(--r, 0px) - 80px), transparent var(--r, 0px)); will-change: transform; }
+/* the shooting star that announces the portal: fixed, so it can fly over the end of About */
+.wp-fx { position: fixed; inset: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 5; visibility: hidden; }
 .wp-cv { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 .wp-cap { position: absolute; left: 50%; bottom: 13vh; translate: -50% 0; display: grid; justify-items: center; gap: 6px; text-align: center; color: #fff; opacity: 0; pointer-events: none; white-space: nowrap; }
 .wp-cap span { font-family: var(--mono); font-size: 11px; color: #f7a8a9; letter-spacing: .1em; }
@@ -1257,11 +1258,8 @@ section.wp + section { position: relative; z-index: 1; }
 @media (prefers-reduced-motion: reduce) {
   section.wp { height: auto; margin-bottom: 0; }
   .wp-sticky { position: relative; height: auto; padding-block: 110px; }
-  .wp-clip { position: relative; clip-path: none; background: none; }
-  .wp-cv, .wp-hud, .wp-cap, .wp-ring { display: none; }
+  .wp-clip { position: relative; -webkit-mask-image: none; mask-image: none; background: none; }
+  .wp-cv, .wp-hud, .wp-cap, .wp-fx { display: none; }
   .wp-end { position: relative; opacity: 1; }
   .wp-final { color: var(--fg); }
 }
-
-/* Contact slides in under the end of the phone section, so there is no empty stretch between them */
-@media (prefers-reduced-motion: no-preference) { section.mb { height: 470vh; margin-bottom: -60vh; } section.mb + section { position: relative; z-index: 1; } }

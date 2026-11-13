@@ -3,7 +3,7 @@ export function Morph() {
       <section className="morph" id="morph" aria-label="Particles morphing through what I build">
         <div className="morph-sticky">
           <canvas id="morph-cv" aria-hidden="true"></canvas>
-          <div className="morph-hint"><span>scroll to morph</span><span>move to scatter · click to explode</span></div>
+          <div className="morph-hint"><span>scroll to morph</span><span>move to scatter</span></div>
           <div className="container morph-cap">
             <div className="mc-idx"><b id="mc-i">01</b> / 05</div>
             <div className="mc-stack" id="mc-stack">
