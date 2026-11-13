@@ -1238,7 +1238,7 @@ section.wp + section { position: relative; z-index: 1; }
 /* the space opens from where the shooting star lands, with a soft edge */
 .wp-clip { position: absolute; inset: 0; background: rgb(0 0 0 / var(--bga, 1)); -webkit-mask-image: radial-gradient(circle at 50% 50%, #000 calc(var(--r, 0px) - 80px), transparent var(--r, 0px)); mask-image: radial-gradient(circle at 50% 50%, #000 calc(var(--r, 0px) - 80px), transparent var(--r, 0px)); will-change: transform; }
 /* the shooting star that announces the portal: fixed, so it can fly over the end of About */
-.wp-fx { position: fixed; inset: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 5; visibility: hidden; }
+.wp-fx { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 5; visibility: hidden; }
 .wp-cv { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 .wp-cap { position: absolute; left: 50%; bottom: 13vh; translate: -50% 0; display: grid; justify-items: center; gap: 6px; text-align: center; color: #fff; opacity: 0; pointer-events: none; white-space: nowrap; }
 .wp-cap span { font-family: var(--mono); font-size: 11px; color: #f7a8a9; letter-spacing: .1em; }
@@ -1263,3 +1263,21 @@ section.wp + section { position: relative; z-index: 1; }
   .wp-end { position: relative; opacity: 1; }
   .wp-final { color: var(--fg); }
 }
+
+/* Contact slides in under the end of the phone section, so there is no empty stretch between them */
+@media (prefers-reduced-motion: no-preference) { section.mb { height: 470vh; margin-bottom: -60vh; } section.mb + section { position: relative; z-index: 1; } }
+
+/* ---------- Boot screen ---------- */
+html.is-booting { overflow: hidden; }
+html.is-booting main *, html.is-booting .nav * { animation-play-state: paused !important; }
+.boot { position: fixed; inset: 0; z-index: 9999; display: grid; place-items: center; background: var(--bg); color: var(--fg); clip-path: inset(0 0 0 0); transition: clip-path 1s cubic-bezier(.76, 0, .24, 1); }
+.boot.out { clip-path: inset(0 0 100% 0); }
+.boot-in { width: min(320px, 72vw); display: grid; gap: 16px; transition: opacity .4s, transform .8s cubic-bezier(.76, 0, .24, 1); }
+.boot.out .boot-in { opacity: 0; transform: translateY(-40px); }
+.boot-mark { font-family: var(--mono); font-size: 30px; font-weight: 500; letter-spacing: .02em; }
+.boot-mark i { font-style: normal; color: var(--accent); animation: bootBlink 1s steps(1) infinite; }
+@keyframes bootBlink { 50% { opacity: 0; } }
+.boot-bar { position: relative; height: 2px; background: var(--line); overflow: hidden; }
+.boot-bar i { position: absolute; inset: 0; background: var(--accent); transform-origin: 0 50%; transform: scaleX(0); box-shadow: 0 0 12px var(--accent); }
+.boot-meta { display: flex; justify-content: space-between; gap: 12px; font-family: var(--mono); font-size: 12px; color: var(--muted); }
+.boot-meta b { font-weight: 500; color: var(--fg); font-variant-numeric: tabular-nums; }

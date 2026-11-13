@@ -28,6 +28,45 @@ export function startEngine(): void {
   var reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
   var fine = matchMedia("(pointer: fine)").matches;
 
+  /* ---------- Boot: load and warm up everything (fonts, images, every 3D scene and its shaders) behind a loading screen,
+     so the first scroll through the page never stutters ---------- */
+  var boot = (function () {
+    var el = document.getElementById("boot"), barEl = document.getElementById("boot-bar"), pctEl = document.getElementById("boot-pct"), txtEl = document.getElementById("boot-txt");
+    var api = { task: function () { return function () {}; }, warm: function (r, s, c, d) { if (d) d(); }, queue: function (fn) { fn(); } };
+    if (!el) return api;
+    var total = 0, done = 0, shown = 0, t0 = performance.now(), finished = false;
+    root.classList.add("is-booting");
+    try { history.scrollRestoration = "manual"; } catch (e) {}
+    scrollTo(0, 0);
+    var LINES = ["loading fonts", "building the laptop", "hanging the certificates", "assembling the phone", "warming up the stars", "almost there"];
+    api.task = function () { total++; var d = false; return function () { if (d) return; d = true; done++; }; };
+    // heavy builds run one at a time, after the loading screen has painted, so its bar keeps moving between them
+    var queue = [];
+    api.queue = function (fn) { queue.push(fn); };
+    function runQueue() { var fn = queue.shift(); if (!fn) return; try { fn(); } catch (e) {} setTimeout(runQueue, 90); }
+    requestAnimationFrame(function () { requestAnimationFrame(function () { setTimeout(runQueue, 120); }); });
+    // compile a scene's shaders now, while nobody is scrolling, instead of on its first visible frame
+    api.warm = function (renderer, scene, camera, d) { setTimeout(function () { try { renderer.compile(scene, camera); } catch (e) {} if (d) d(); }, 30); };
+    function finish() {
+      if (finished) return; finished = true;
+      barEl.style.transform = "scaleX(1)"; pctEl.textContent = "100%"; txtEl.textContent = "ready";
+      setTimeout(function () { scrollTo(0, 0); el.classList.add("out"); root.classList.remove("is-booting"); dispatchEvent(new Event("gn:booted")); }, 280);
+      setTimeout(function () { el.style.display = "none"; }, 1600);
+    }
+    (function tick() {
+      if (finished) return;
+      var target = total ? done / total : 0, age = performance.now() - t0;
+      shown += (Math.min(target, 0.985) - shown) * 0.07;
+      pctEl.textContent = Math.round(shown * 100) + "%"; barEl.style.transform = "scaleX(" + shown.toFixed(3) + ")";
+      txtEl.textContent = LINES[Math.min(LINES.length - 1, Math.floor(shown * LINES.length))];
+      if ((done >= total && age > 1000 && shown > 0.93) || age > 7000) finish();
+      requestAnimationFrame(tick);
+    })();
+    var fT = api.task(); (document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve()).then(fT, fT);
+    var lT = api.task(); if (document.readyState === "complete") lT(); else addEventListener("load", lT);
+    return api;
+  })();
+
   /* ---------- Theme with circular reveal ---------- */
   // always opens in dark; the toggle only changes the current visit
   try { localStorage.removeItem("theme"); } catch (e) { }
@@ -505,12 +544,13 @@ export function startEngine(): void {
 
     // ---- three.js scene: only built when the section gets close, so the page loads light
     // (if three.js fails to load, the rest of the page keeps working)
-    var glStarted = false;
+    var glStarted = false, BT_lp = boot.task();
     function startGL() { if (glStarted) return; glStarted = true; buildGL(); }
     if ("IntersectionObserver" in window) {
       var near = new IntersectionObserver(function (en) { if (en[0].isIntersecting) { near.disconnect(); startGL(); } }, { rootMargin: "150% 0px" });
       near.observe(sec);
     } else startGL();
+    boot.queue(startGL); // built with the page, under the boot screen
     function buildGL() {
     loadThree().then(function (mod) {
     var THREE = mod.THREE, RoomEnvironment = mod.RoomEnvironment;
@@ -520,7 +560,7 @@ export function startEngine(): void {
     renderer.setClearColor(0x000000, 0);
     renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05;
     renderer.outputColorSpace = THREE.SRGBColorSpace;
-    var scene = new THREE.Scene(), camera = new THREE.PerspectiveCamera(30, 1, 0.05, 100);
+    var scene = new THREE.Scene(), camera = new THREE.PerspectiveCamera(30, 1, 0.05, 100); boot.warm(renderer, scene, camera, BT_lp);
     var pmrem = new THREE.PMREMGenerator(renderer);
     scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
     var sun = new THREE.DirectionalLight(0xffffff, 1.4); sun.position.set(3, 6, 4); scene.add(sun);
@@ -1253,13 +1293,15 @@ export function startEngine(): void {
 
     // ---- the objects, one per stage, built in three.js
     var started = false;
-    function go3() { if (started || !gl) return; started = true; loadThree().then(build).catch(function () { gl.style.display = "none"; }); }
+    var BT_wp = boot.task();
+    function go3() { if (started || !gl) { BT_wp(); return; } started = true; loadThree().then(build).catch(function () { gl.style.display = "none"; BT_wp(); }); }
     if ("IntersectionObserver" in window) { var nr = new IntersectionObserver(function (en) { if (en[0].isIntersecting) { nr.disconnect(); go3(); } }, { rootMargin: "150% 0px" }); nr.observe(sec); } else go3();
+    boot.queue(go3); // built with the page, under the boot screen
     function build(mod) {
       var THREE = mod.THREE, RoomEnvironment = mod.RoomEnvironment, renderer;
       try { renderer = new THREE.WebGLRenderer({ canvas: gl, antialias: true, alpha: true }); } catch (e) { gl.style.display = "none"; return; }
       renderer.setClearColor(0, 0); renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.toneMapping = THREE.ACESFilmicToneMapping;
-      var scene = new THREE.Scene(), camera = new THREE.PerspectiveCamera(40, 1, 0.05, 120); camera.position.set(0, 0, 5);
+      var scene = new THREE.Scene(), camera = new THREE.PerspectiveCamera(40, 1, 0.05, 120); camera.position.set(0, 0, 5); boot.warm(renderer, scene, camera, BT_wp);
       var pm = new THREE.PMREMGenerator(renderer); scene.environment = pm.fromScene(new RoomEnvironment(), 0.04).texture;
       var kl = new THREE.DirectionalLight(0xffffff, 1.6); kl.position.set(3, 4, 5); scene.add(kl);
       var pl = new THREE.DirectionalLight(0xf7a8a9, 2.4); pl.position.set(-4, -2, 2); scene.add(pl);
@@ -1394,24 +1436,26 @@ export function startEngine(): void {
 
     // ---- the shooting star lives on a fixed overlay so it can cross the end of the section above
     var fx = document.getElementById("wp-fx"), fg2 = fx ? fx.getContext("2d") : null, fxOn = false;
-    function fxSize() { if (!fx) return; fx.width = Math.round(innerWidth * dpr); fx.height = Math.round(innerHeight * dpr); }
+    function fxSize() { if (!fx) return; fx.width = Math.round((fx.clientWidth || innerWidth) * dpr); fx.height = Math.round((fx.clientHeight || innerHeight) * dpr); }
     fxSize(); onRealResize(fxSize);
     function shootingStar(ent, time, open, rad) {
       if (!fg2) return;
       var active = ent > 0.32 && open < 0.995;
       if (!active) { if (fxOn) { fg2.setTransform(1, 0, 0, 1, 0, 0); fg2.clearRect(0, 0, fx.width, fx.height); fx.style.visibility = "hidden"; fxOn = false; } return; }
       if (!fxOn) { fx.style.visibility = "visible"; fxOn = true; }
-      var w = innerWidth, h = innerHeight, cx = w / 2, cy = h / 2;
+      // phones change the viewport height as the address bar moves: keep the overlay matched to it every frame
+      var w = fx.clientWidth || innerWidth, h = fx.clientHeight || innerHeight, cx = w / 2, cy = h / 2, scl = Math.max(0.42, Math.min(1, Math.min(w, h) / 820));
+      if (fx.width !== Math.round(w * dpr) || fx.height !== Math.round(h * dpr)) { fx.width = Math.round(w * dpr); fx.height = Math.round(h * dpr); }
       fg2.setTransform(dpr, 0, 0, dpr, 0, 0); fg2.clearRect(0, 0, w, h);
       // the streak: from the top left, on a gentle arc, into the centre
-      var tr = sm((ent - 0.36) / 0.42), sx = w * 0.04, sy = h * 0.08;
-      function at(k) { var x = sx + (cx - sx) * k, y = sy + (cy - sy) * k - Math.sin(k * Math.PI) * h * 0.06; return [x, y]; }
+      var tr = sm((ent - 0.36) / 0.42), sx = w < h ? w * 0.08 : w * 0.04, sy = w < h ? h * 0.2 : h * 0.08;
+      function at(k) { var x = sx + (cx - sx) * k, y = sy + (cy - sy) * k - Math.sin(k * Math.PI) * Math.min(w, h) * 0.08; return [x, y]; }
       if (tr > 0 && tr < 1) {
         var head = at(tr), steps = 26;
         for (var i = 0; i < steps; i++) {
           var k0 = Math.max(0, tr - (i + 1) * 0.012), k1 = Math.max(0, tr - i * 0.012), a = at(k0), b = at(k1), f = 1 - i / steps;
           fg2.strokeStyle = i < 3 ? "rgba(255,255,255," + f + ")" : "rgba(247,168,169," + (f * 0.9).toFixed(3) + ")";
-          fg2.lineWidth = 3.2 * f + 0.4; fg2.lineCap = "round"; fg2.beginPath(); fg2.moveTo(a[0], a[1]); fg2.lineTo(b[0], b[1]); fg2.stroke();
+          fg2.lineWidth = (3.2 * f + 0.4) * scl; fg2.lineCap = "round"; fg2.beginPath(); fg2.moveTo(a[0], a[1]); fg2.lineTo(b[0], b[1]); fg2.stroke();
         }
         var hg = fg2.createRadialGradient(head[0], head[1], 0, head[0], head[1], 26); hg.addColorStop(0, "rgba(255,255,255,.95)"); hg.addColorStop(0.3, "rgba(247,168,169,.5)"); hg.addColorStop(1, "rgba(247,168,169,0)");
         fg2.fillStyle = hg; fg2.fillRect(head[0] - 26, head[1] - 26, 52, 52);
@@ -1433,7 +1477,7 @@ export function startEngine(): void {
         fg2.fillStyle = rg2; fg2.beginPath(); fg2.arc(cx, cy, r1, 0, 6.2832); fg2.fill();
       }
       if (gl0 > 0.002) {
-        var sz = 30 + 120 * sm((ent - 0.74) / 0.08) + rad * 0.9, rot = (ent - 0.74) * 2.4 + time * 0.4 + open * 0.8;
+        var sz = (30 + 120 * sm((ent - 0.74) / 0.08)) * scl + rad * 0.9, rot = (ent - 0.74) * 2.4 + time * 0.4 + open * 0.8;
         var rg = fg2.createRadialGradient(cx, cy, 0, cx, cy, sz * 1.6); rg.addColorStop(0, "rgba(255,255,255," + (0.9 * gl0).toFixed(3) + ")"); rg.addColorStop(0.18, "rgba(247,168,169," + (0.55 * gl0).toFixed(3) + ")"); rg.addColorStop(1, "rgba(247,168,169,0)");
         fg2.fillStyle = rg; fg2.fillRect(cx - sz * 1.6, cy - sz * 1.6, sz * 3.2, sz * 3.2);
         fg2.save(); fg2.translate(cx, cy); fg2.rotate(rot); fg2.globalAlpha = gl0;
@@ -1578,6 +1622,7 @@ export function startEngine(): void {
     var HOLD = HOLD_VH / (nSeg * 105 + HOLD_VH);
     var infos = srBtns.map(function (btn, i) { return { i: i, img: btn.dataset.img, title: btn.dataset.title, issuer: btn.dataset.issuer, date: btn.dataset.date, btn: btn, ar: 1.414 }; });
     var started = false;
+    var BT_gl = boot.task();
     function go() {
       if (started) return; started = true;
       var left = N;
@@ -1588,6 +1633,7 @@ export function startEngine(): void {
       var near = new IntersectionObserver(function (en) { if (en[0].isIntersecting) { near.disconnect(); go(); } }, { rootMargin: "150% 0px" });
       near.observe(sec);
     } else go();
+    boot.queue(go); // built with the page, under the boot screen
     function cl(x) { return Math.max(0, Math.min(1, x)); }
     function ease(x) { x = cl(x); return x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2; }
     function lerp(a, b, k) { return a + (b - a) * k; }
@@ -1597,7 +1643,7 @@ export function startEngine(): void {
       var THREE = mod.THREE, renderer;
       try { renderer = new THREE.WebGLRenderer({ canvas: cv, antialias: true, alpha: true, preserveDrawingBuffer: true }); } catch (e) { cv.style.display = "none"; return; }
       renderer.setClearColor(0, 0); renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.1;
-      var scene = new THREE.Scene(), camera = new THREE.PerspectiveCamera(50, 1, 0.05, 80);
+      var scene = new THREE.Scene(), camera = new THREE.PerspectiveCamera(50, 1, 0.05, 80); boot.warm(renderer, scene, camera, BT_gl);
       camera.rotation.order = "YXZ";
       var fog = new THREE.Fog(0x000000, 5, 24); scene.fog = fog;
       var hemi = new THREE.HemisphereLight(0xffffff, 0x222226, 0.2); scene.add(hemi);
@@ -1815,11 +1861,13 @@ export function startEngine(): void {
     if (!sec || !cv) return;
     var sticky = sec.querySelector(".mb-sticky"), head = sec.querySelector(".mb-head"), cap = sec.querySelector(".mb-cap"), navEl = document.querySelector(".nav");
     var started = false;
-    function go() { if (started) return; started = true; loadThree().then(build).catch(function () { cv.style.display = "none"; }); }
+    var BT_mb = boot.task();
+    function go() { if (started) return; started = true; loadThree().then(build).catch(function () { cv.style.display = "none"; BT_mb(); }); }
     if ("IntersectionObserver" in window) {
       var near = new IntersectionObserver(function (en) { if (en[0].isIntersecting) { near.disconnect(); go(); } }, { rootMargin: "120% 0px" });
       near.observe(sec);
     } else go();
+    boot.queue(go); // built with the page, under the boot screen
     function cl(x) { return Math.max(0, Math.min(1, x)); }
     function ease(x) { x = cl(x); return x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2; }
     function eo(x) { x = cl(x); return 1 - Math.pow(1 - x, 3); }
@@ -1830,7 +1878,7 @@ export function startEngine(): void {
       var THREE = mod.THREE, RoomEnvironment = mod.RoomEnvironment, renderer;
       try { renderer = new THREE.WebGLRenderer({ canvas: cv, antialias: true, alpha: true }); } catch (e) { cv.style.display = "none"; return; }
       renderer.setClearColor(0, 0); renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05;
-      var scene = new THREE.Scene(), camera = new THREE.PerspectiveCamera(28, 1, 0.05, 60);
+      var scene = new THREE.Scene(), camera = new THREE.PerspectiveCamera(28, 1, 0.05, 60); boot.warm(renderer, scene, camera, BT_mb);
       var pmrem = new THREE.PMREMGenerator(renderer); scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
       var key = new THREE.DirectionalLight(0xffffff, 2.2); key.position.set(2.5, 4, 5); scene.add(key);
       scene.add(new THREE.HemisphereLight(0xffffff, 0x222226, 0.6));
